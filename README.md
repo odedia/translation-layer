@@ -64,8 +64,13 @@ TranslateGemma is Google's specialized translation model based on Gemma 3. Avail
 
 ### 1. Set Environment Variables
 
+You need an OpenSubtitles.com account and API key:
+1. Create an account at [opensubtitles.com](https://www.opensubtitles.com)
+2. Go to your profile → **API Consumers** → **Create new consumer**
+3. Copy your API key
+
 ```bash
-# Required - OpenSubtitles credentials
+# Required - OpenSubtitles credentials (get API key from opensubtitles.com/consumers)
 export OPEN_SUBTITLES_USERNAME="your-username"
 export OPEN_SUBTITLES_PASSWORD="your-password"
 export OPEN_SUBTITLES_API_KEY="your-api-key"
