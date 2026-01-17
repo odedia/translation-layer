@@ -1,0 +1,19 @@
+{
+    "name": "translation-layer-stremio",
+    "version": "1.0.0",
+    "description": "Stremio add-on for Translation Layer subtitle translation service",
+    "main": "index.js",
+    "scripts": {
+        "start": "node index.js",
+        "dev": "node index.js"
+    },
+    "dependencies": {
+        "stremio-addon-sdk": "^1.6.10",
+        "node-fetch": "^2.7.0"
+    },
+    "engines": {
+        "node": ">=14.0.0"
+    },
+    "author": "",
+    "license": "Apache-2.0"
+}

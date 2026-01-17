@@ -26,7 +26,8 @@ Kodi → Translation Layer → OpenSubtitles.org (fetch English)
 - ✅ **Caches translations** to avoid re-translating
 - ✅ **Web dashboard** to monitor translation progress
 - ✅ **OpenSubtitles.com REST API** compatible
-- ✅ **Custom Kodi add-on** included
+- ✅ **Kodi add-on** included
+- ✅ **Stremio add-on** included
 - ✅ Built with Spring Boot 4.0 and Spring AI 2.0
 
 ## Prerequisites
@@ -149,6 +150,25 @@ When you download a subtitle for the first time, translation takes time (30 seco
 - Change your target language from the **web dashboard** dropdown
 - The selected language persists across restarts
 - RTL languages (Hebrew, Arabic, Persian, Urdu, Pashto) are automatically handled
+
+## Stremio Add-on
+
+A separate Stremio add-on is included in the `stremio-addon/` folder.
+
+### Quick Start
+
+```bash
+cd stremio-addon
+npm install
+npm start
+```
+
+The add-on runs on `http://localhost:7000`. To install in Stremio:
+1. Open Stremio → **Add-ons**
+2. Enter: `http://localhost:7000/manifest.json`
+3. Click **Install**
+
+See [stremio-addon/README.md](stremio-addon/README.md) for full documentation.
 
 ## Configuration
 
