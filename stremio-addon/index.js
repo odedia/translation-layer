@@ -3,7 +3,7 @@ const fetch = require('node-fetch');
 
 // Configuration - adjust these to your Translation Layer server
 const TRANSLATION_LAYER_URL = process.env.TRANSLATION_LAYER_URL || 'http://localhost:8080';
-const PORT = process.env.PORT || 7000;
+const PORT = process.env.PORT || 7001;
 
 // Add-on manifest
 const manifest = {

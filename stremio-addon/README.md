@@ -24,7 +24,7 @@ npm start
 TRANSLATION_LAYER_URL=http://192.168.1.10:8080 npm start
 
 # Custom port
-PORT=7001 npm start
+PORT=7002 npm start
 ```
 
 ## Adding to Stremio
@@ -32,7 +32,7 @@ PORT=7001 npm start
 1. Start the add-on: `npm start`
 2. Open Stremio
 3. Go to **Add-ons** → Click the search box
-4. Enter: `http://localhost:7000/manifest.json`
+4. Enter: `http://localhost:7001/manifest.json`
 5. Click **Install**
 
 ## How It Works
@@ -48,7 +48,7 @@ PORT=7001 npm start
 | Environment Variable | Default | Description |
 |---------------------|---------|-------------|
 | `TRANSLATION_LAYER_URL` | `http://localhost:8080` | URL of your Translation Layer service |
-| `PORT` | `7000` | Port for the Stremio add-on server |
+| `PORT` | `7001` | Port for the Stremio add-on server |
 
 ## Note on First-Time Translations
 

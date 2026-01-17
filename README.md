@@ -153,6 +153,8 @@ When you download a subtitle for the first time, translation takes time (30 seco
 
 ## Stremio Add-on
 
+![Stremio Subtitles](images/Stremio.png)
+
 A separate Stremio add-on is included in the `stremio-addon/` folder.
 
 ### Quick Start
@@ -163,9 +165,9 @@ npm install
 npm start
 ```
 
-The add-on runs on `http://localhost:7000`. To install in Stremio:
+The add-on runs on `http://localhost:7001`. To install in Stremio:
 1. Open Stremio → **Add-ons**
-2. Enter: `http://localhost:7000/manifest.json`
+2. Enter: `http://localhost:7001/manifest.json`
 3. Click **Install**
 
 See [stremio-addon/README.md](stremio-addon/README.md) for full documentation.
