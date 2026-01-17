@@ -18,6 +18,8 @@ Kodi → Translation Layer → OpenSubtitles.org (fetch English)
 
 ## Features
 
+![Web Dashboard](images/Dashboard.png)
+
 - ✅ **Translates to 30+ languages** including Hebrew, Arabic, Spanish, French, German, Chinese, Japanese, and more
 - ✅ **Automatic RTL support** for Hebrew, Arabic, Persian, and Urdu
 - ✅ **Multiple AI backends**: Local Ollama or cloud OpenAI
@@ -97,6 +99,8 @@ Edit `application.yml` and change `spring.ai.model.chat` from `ollama` to `opena
 The service starts on `http://localhost:8080`. Visit the web dashboard to monitor translations.
 
 ## Kodi Add-on Installation
+
+![Kodi Subtitle Search](images/Kodi.png)
 
 A custom Kodi add-on is included that connects to your local Translation Layer service.
 
