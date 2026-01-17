@@ -1,0 +1,22 @@
+1
+00:00:01,000 --> 00:00:04,000
+Hello, and welcome to this movie.
+
+2
+00:00:05,000 --> 00:00:08,500
+This is an example subtitle file
+for testing translation.
+
+3
+00:00:10,000 --> 00:00:14,000
+The quick brown fox jumps over the lazy dog.
+
+4
+00:00:15,500 --> 00:00:19,000
+How are you doing today?
+I hope you are well.
+
+5
+00:00:20,000 --> 00:00:24,000
+Thank you for watching.
+See you next time!

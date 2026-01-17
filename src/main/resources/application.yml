@@ -1,0 +1,39 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: translation-layer
+  ai:
+    model:
+      chat: ollama  # Switch to 'openai' to use OpenAI API instead of local Ollama
+    ollama:
+      base-url: http://localhost:11434
+      chat:
+        options:
+          model: translategemma:4b
+          temperature: 0.2
+          num-predict: 512
+    openai:
+      base-url: ${OPENAI_BASE_URL:https://api.openai.com}
+      api-key: ${OPENAI_API_KEY:}
+      chat:
+        options:
+          model: gpt-4o-mini
+          temperature: 0.2
+
+opensubtitles:
+  base-url: https://api.opensubtitles.com/api/v1
+  username: ${OPEN_SUBTITLES_USERNAME:}
+  password: ${OPEN_SUBTITLES_PASSWORD:}
+  api-key: ${OPEN_SUBTITLES_API_KEY:}
+
+translation:
+  source-language: English
+  target-language: Hebrew
+  rtl:
+    enabled: true
+  cache:
+    enabled: true
+    directory: ${HOME}/.subtitle-cache
+  subtitle-directory: ./subtitles

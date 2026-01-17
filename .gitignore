@@ -1,0 +1,32 @@
+# Build output
+target/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+
+# Maven wrapper (optional - can include if desired)
+# .mvn/
+
+# Cache directories (runtime data)
+subtitle-cache/
+*.subtitle-cache/
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.local
+
+# Compiled files
+*.class
+*.jar
+!.mvn/wrapper/*.jar
+
+# Kodi addon build artifacts
+*.zip
