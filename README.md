@@ -130,7 +130,7 @@ A custom Kodi add-on is included that connects to your local Translation Layer s
 
 1. Go to **Add-ons** → **My add-ons** → **Subtitles** → **Translation Layer**
 2. Select **Configure**
-3. Set the **Translation Layer URL** to your server (default: `http://localhost:8080`)
+3. Set the **Translation Layer URL** to your server (default: `http://192.168.1.10:8080/api/v1` - must include the /api/v1 as expected by OpenSubtitles API)
 
 ![Kodi Add-on Configuration](images/Config.png)
 
