@@ -132,6 +132,8 @@ A custom Kodi add-on is included that connects to your local Translation Layer s
 2. Select **Configure**
 3. Set the **Translation Layer URL** to your server (default: `http://localhost:8080`)
 
+![Kodi Add-on Configuration](images/config.png)
+
 ### Important Usage Notes
 
 > ⚠️ **First-time downloads will timeout in Kodi** - This is expected behavior!
