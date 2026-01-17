@@ -20,8 +20,8 @@ Kodi → Translation Layer → OpenSubtitles.org (fetch English)
 
 ![Web Dashboard](images/Dashboard.png)
 
-- ✅ **Translates to 30+ languages** including Hebrew, Arabic, Spanish, French, German, Chinese, Japanese, and more
-- ✅ **Automatic RTL support** for Hebrew, Arabic, Persian, and Urdu
+- ✅ **Translates to 55 languages** including Hebrew, Arabic, Spanish, French, German, Chinese, Japanese, Hindi, and more
+- ✅ **Automatic RTL support** for Hebrew, Arabic, Persian, Urdu, and Pashto
 - ✅ **Multiple AI backends**: Local Ollama or cloud OpenAI
 - ✅ **Caches translations** to avoid re-translating
 - ✅ **Web dashboard** to monitor translation progress
@@ -142,7 +142,7 @@ When you download a subtitle for the first time, translation takes time (30 seco
 **Language Selection:**
 - Change your target language from the **web dashboard** dropdown
 - The selected language persists across restarts
-- RTL languages (Hebrew, Arabic, Persian, Urdu) are automatically handled
+- RTL languages (Hebrew, Arabic, Persian, Urdu, Pashto) are automatically handled
 
 ## Configuration
 

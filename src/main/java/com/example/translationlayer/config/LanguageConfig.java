@@ -26,42 +26,73 @@ public class LanguageConfig {
 
     // RTL languages
     private static final Set<String> RTL_LANGUAGES = Set.of(
-            "Hebrew", "Arabic", "Persian", "Urdu");
+            "Hebrew", "Arabic", "Persian", "Urdu", "Pashto");
 
-    // Top 30 languages (ordered for dropdown display)
+    // All 55 TranslateGemma supported languages (ordered for dropdown display)
     private static final Map<String, String> SUPPORTED_LANGUAGES = new LinkedHashMap<>();
     static {
+        SUPPORTED_LANGUAGES.put("Afrikaans", "af");
+        SUPPORTED_LANGUAGES.put("Albanian", "sq");
+        SUPPORTED_LANGUAGES.put("Amharic", "am");
         SUPPORTED_LANGUAGES.put("Arabic", "ar");
+        SUPPORTED_LANGUAGES.put("Armenian", "hy");
+        SUPPORTED_LANGUAGES.put("Azerbaijani", "az");
+        SUPPORTED_LANGUAGES.put("Basque", "eu");
+        SUPPORTED_LANGUAGES.put("Belarusian", "be");
+        SUPPORTED_LANGUAGES.put("Bengali", "bn");
+        SUPPORTED_LANGUAGES.put("Bulgarian", "bg");
+        SUPPORTED_LANGUAGES.put("Catalan", "ca");
         SUPPORTED_LANGUAGES.put("Chinese (Simplified)", "zh-CN");
         SUPPORTED_LANGUAGES.put("Chinese (Traditional)", "zh-TW");
+        SUPPORTED_LANGUAGES.put("Croatian", "hr");
         SUPPORTED_LANGUAGES.put("Czech", "cs");
         SUPPORTED_LANGUAGES.put("Danish", "da");
         SUPPORTED_LANGUAGES.put("Dutch", "nl");
+        SUPPORTED_LANGUAGES.put("Estonian", "et");
         SUPPORTED_LANGUAGES.put("Finnish", "fi");
         SUPPORTED_LANGUAGES.put("French", "fr");
+        SUPPORTED_LANGUAGES.put("Galician", "gl");
+        SUPPORTED_LANGUAGES.put("Georgian", "ka");
         SUPPORTED_LANGUAGES.put("German", "de");
         SUPPORTED_LANGUAGES.put("Greek", "el");
+        SUPPORTED_LANGUAGES.put("Gujarati", "gu");
         SUPPORTED_LANGUAGES.put("Hebrew", "he");
         SUPPORTED_LANGUAGES.put("Hindi", "hi");
         SUPPORTED_LANGUAGES.put("Hungarian", "hu");
+        SUPPORTED_LANGUAGES.put("Icelandic", "is");
         SUPPORTED_LANGUAGES.put("Indonesian", "id");
         SUPPORTED_LANGUAGES.put("Italian", "it");
         SUPPORTED_LANGUAGES.put("Japanese", "ja");
+        SUPPORTED_LANGUAGES.put("Kannada", "kn");
+        SUPPORTED_LANGUAGES.put("Kazakh", "kk");
         SUPPORTED_LANGUAGES.put("Korean", "ko");
+        SUPPORTED_LANGUAGES.put("Latvian", "lv");
+        SUPPORTED_LANGUAGES.put("Lithuanian", "lt");
+        SUPPORTED_LANGUAGES.put("Macedonian", "mk");
         SUPPORTED_LANGUAGES.put("Malay", "ms");
+        SUPPORTED_LANGUAGES.put("Malayalam", "ml");
+        SUPPORTED_LANGUAGES.put("Marathi", "mr");
         SUPPORTED_LANGUAGES.put("Norwegian", "no");
+        SUPPORTED_LANGUAGES.put("Pashto", "ps");
         SUPPORTED_LANGUAGES.put("Persian", "fa");
         SUPPORTED_LANGUAGES.put("Polish", "pl");
         SUPPORTED_LANGUAGES.put("Portuguese", "pt");
         SUPPORTED_LANGUAGES.put("Romanian", "ro");
         SUPPORTED_LANGUAGES.put("Russian", "ru");
+        SUPPORTED_LANGUAGES.put("Serbian", "sr");
+        SUPPORTED_LANGUAGES.put("Slovak", "sk");
+        SUPPORTED_LANGUAGES.put("Slovenian", "sl");
         SUPPORTED_LANGUAGES.put("Spanish", "es");
+        SUPPORTED_LANGUAGES.put("Swahili", "sw");
         SUPPORTED_LANGUAGES.put("Swedish", "sv");
+        SUPPORTED_LANGUAGES.put("Tamil", "ta");
+        SUPPORTED_LANGUAGES.put("Telugu", "te");
         SUPPORTED_LANGUAGES.put("Thai", "th");
         SUPPORTED_LANGUAGES.put("Turkish", "tr");
         SUPPORTED_LANGUAGES.put("Ukrainian", "uk");
         SUPPORTED_LANGUAGES.put("Urdu", "ur");
         SUPPORTED_LANGUAGES.put("Vietnamese", "vi");
+        SUPPORTED_LANGUAGES.put("Welsh", "cy");
     }
 
     private String currentLanguage = "Hebrew"; // Default
