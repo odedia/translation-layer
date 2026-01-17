@@ -96,9 +96,8 @@ export OPENAI_BASE_URL="https://your-custom-endpoint.com"
 ```
 
 **Using OpenAI:**
-Edit `application.yml` and change `spring.ai.model.chat` from `ollama` to `openai`, then run:
 ```bash
-./mvnw spring-boot:run
+SPRING_AI_MODEL_CHAT=openai ./mvnw spring-boot:run
 ```
 
 The service starts on `http://localhost:8080`. Visit the web dashboard to monitor translations.
