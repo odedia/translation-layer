@@ -269,20 +269,22 @@ public class TranslationService {
      */
     public List<SubtitleEntry> translateSubtitles(List<SubtitleEntry> entries,
             java.util.function.IntConsumer progressCallback) {
-        log.info("Starting translation of {} subtitle entries with batch size {}", entries.size(), batchSize);
+        // Use configurable batch size from settings
+        int configuredBatchSize = appSettings.getTranslationBatchSize();
+        log.info("Starting translation of {} subtitle entries with batch size {}", entries.size(), configuredBatchSize);
 
         List<SubtitleEntry> translatedEntries = new ArrayList<>();
 
-        // Process in batches for better performance
-        for (int i = 0; i < entries.size(); i += batchSize) {
-            int end = Math.min(i + batchSize, entries.size());
+        // Process in batches for better performance and context
+        for (int i = 0; i < entries.size(); i += configuredBatchSize) {
+            int end = Math.min(i + configuredBatchSize, entries.size());
             List<SubtitleEntry> batch = entries.subList(i, end);
 
             List<SubtitleEntry> translatedBatch = translateBatch(batch);
             translatedEntries.addAll(translatedBatch);
 
-            log.info("Translated batch {}/{}", (i / batchSize) + 1,
-                    (entries.size() + batchSize - 1) / batchSize);
+            log.info("Translated batch {}/{}", (i / configuredBatchSize) + 1,
+                    (entries.size() + configuredBatchSize - 1) / configuredBatchSize);
 
             // Report progress
             if (progressCallback != null) {
@@ -302,9 +304,98 @@ public class TranslationService {
     }
 
     /**
-     * Translates a batch of subtitle entries in parallel.
+     * Translates a batch of subtitle entries together for better context.
+     * Uses <<~N~>> markers to identify each cue in the batch.
      */
     private List<SubtitleEntry> translateBatch(List<SubtitleEntry> batch) {
+        if (batch.isEmpty()) {
+            return batch;
+        }
+
+        // Build batch prompt with numbered markers
+        StringBuilder batchPrompt = new StringBuilder();
+        batchPrompt.append("Translate these subtitles to ").append(languageConfig.getTargetLanguage());
+        batchPrompt.append(". Preserve the <<~N~>> markers exactly. Output ONLY the translations with markers.\n\n");
+
+        for (int i = 0; i < batch.size(); i++) {
+            SubtitleEntry entry = batch.get(i);
+            String text = entry.text().replace("\n", " "); // Flatten multi-line into single line for input
+
+            // Skip hearing impaired entries if setting is enabled
+            if (appSettings.isSkipHearingImpaired() && isHearingImpairedOnly(entry.text())) {
+                batchPrompt.append("<<~").append(i).append("~>> ").append(text).append("\n");
+            } else {
+                batchPrompt.append("<<~").append(i).append("~>> ").append(text).append("\n");
+            }
+        }
+
+        try {
+            // Build chat client with dynamic system prompt for current language
+            ChatClient chatClient = chatClientBuilder
+                    .defaultSystem(buildSystemPrompt())
+                    .build();
+
+            String response = chatClient.prompt()
+                    .user(batchPrompt.toString())
+                    .call()
+                    .content();
+
+            log.debug("Batch translation response: {}", response);
+
+            // Parse response and match to original entries
+            return parseBatchResponse(response, batch);
+
+        } catch (Exception e) {
+            log.error("Batch translation failed, falling back to individual translation", e);
+            // Fallback: translate individually
+            return translateBatchIndividually(batch);
+        }
+    }
+
+    /**
+     * Parse the batch translation response and match translated text to original
+     * entries.
+     */
+    private List<SubtitleEntry> parseBatchResponse(String response, List<SubtitleEntry> batch) {
+        List<SubtitleEntry> result = new ArrayList<>();
+
+        // Pattern to match <<~N~>> followed by translated text
+        Pattern markerPattern = Pattern.compile("<<~(\\d+)~>>\\s*(.+?)(?=<<~\\d+~>>|$)", Pattern.DOTALL);
+        java.util.regex.Matcher matcher = markerPattern.matcher(response);
+
+        // Build a map of index -> translated text
+        java.util.Map<Integer, String> translations = new java.util.HashMap<>();
+        while (matcher.find()) {
+            int index = Integer.parseInt(matcher.group(1));
+            String translatedText = matcher.group(2).trim();
+            // Clean up the translated text
+            translatedText = cleanTranslationResponse(translatedText, "");
+            translations.put(index, translatedText);
+        }
+
+        // Map translations back to entries
+        for (int i = 0; i < batch.size(); i++) {
+            SubtitleEntry entry = batch.get(i);
+            String translatedText = translations.get(i);
+
+            if (translatedText != null && !translatedText.isBlank()) {
+                // Apply RTL processing
+                translatedText = rtlTextProcessor.processRtlText(translatedText);
+                result.add(entry.withTranslatedText(translatedText));
+            } else {
+                // If no translation found, keep original or translate individually
+                log.warn("No translation found for cue {}, using original", i);
+                result.add(entry);
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Fallback: translate entries individually if batch translation fails.
+     */
+    private List<SubtitleEntry> translateBatchIndividually(List<SubtitleEntry> batch) {
         List<CompletableFuture<SubtitleEntry>> futures = batch.stream()
                 .map(entry -> CompletableFuture.supplyAsync(() -> {
                     String translatedText = translateText(entry.text());

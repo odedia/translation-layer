@@ -53,6 +53,7 @@ public class SettingsController {
         settings.put("ollamaBaseUrl", appSettings.getOllamaBaseUrl());
         settings.put("targetLanguage", appSettings.getTargetLanguage());
         settings.put("skipHearingImpaired", appSettings.isSkipHearingImpaired());
+        settings.put("translationBatchSize", appSettings.getTranslationBatchSize());
         settings.put("smbHost", appSettings.getSmbHost());
         settings.put("smbShare", appSettings.getSmbShare());
         settings.put("smbUsername", appSettings.getSmbUsername());
@@ -107,6 +108,9 @@ public class SettingsController {
             }
             if (updates.containsKey("skipHearingImpaired")) {
                 appSettings.setSkipHearingImpaired(Boolean.parseBoolean(updates.get("skipHearingImpaired").toString()));
+            }
+            if (updates.containsKey("translationBatchSize")) {
+                appSettings.setTranslationBatchSize(Integer.parseInt(updates.get("translationBatchSize").toString()));
             }
             if (updates.containsKey("smbHost")) {
                 appSettings.setSmbHost(updates.get("smbHost").toString());
@@ -427,7 +431,12 @@ public class SettingsController {
         html.append("<div class='toggle-row'><span>Skip hearing impaired text [brackets]</span>");
         html.append(
                 "<label class='toggle'><input type='checkbox' id='skipHearingImpaired'><span class='toggle-slider'></span></label>");
-        html.append("</div></div>");
+        html.append("</div>");
+        html.append("<div class='form-group'><label>Batch Size (cues per translation)</label>");
+        html.append("<input type='number' id='translationBatchSize' min='1' max='50' value='20'>");
+        html.append(
+                "<p style='font-size:0.8em;color:#888;margin-top:4px'>Higher = better context, lower = faster feedback. Default: 20</p></div>");
+        html.append("</div>");
 
         // SMB Settings
         html.append("<div class='card'><h2>📁 NAS Connection (SMB)</h2>");
@@ -464,6 +473,7 @@ public class SettingsController {
                 "if(s.openSubtitlesPasswordSet){document.getElementById('openSubtitlesPassword').placeholder='Password saved (leave blank to keep)';}");
         html.append("document.getElementById('targetLanguage').value=s.targetLanguage||'Hebrew (RTL)';");
         html.append("document.getElementById('skipHearingImpaired').checked=s.skipHearingImpaired||false;");
+        html.append("document.getElementById('translationBatchSize').value=s.translationBatchSize||20;");
         html.append("document.getElementById('smbHost').value=s.smbHost||'';");
         html.append("document.getElementById('smbShare').value=s.smbShare||'';");
         html.append("document.getElementById('smbUsername').value=s.smbUsername||'';");
@@ -533,6 +543,7 @@ public class SettingsController {
         html.append("openSubtitlesPassword:document.getElementById('openSubtitlesPassword').value,");
         html.append("targetLanguage:document.getElementById('targetLanguage').value,");
         html.append("skipHearingImpaired:document.getElementById('skipHearingImpaired').checked,");
+        html.append("translationBatchSize:parseInt(document.getElementById('translationBatchSize').value),");
         html.append("smbHost:document.getElementById('smbHost').value,");
         html.append("smbShare:document.getElementById('smbShare').value,");
         html.append("smbUsername:document.getElementById('smbUsername').value,");

@@ -41,6 +41,7 @@ public class AppSettings {
     // Translation Settings
     private String targetLanguage = "Hebrew (RTL)";
     private boolean skipHearingImpaired = false;
+    private int translationBatchSize = 20; // Number of subtitle cues to translate at once
 
     // SMB Settings (migrated from SmbConfig)
     private String smbHost = "";
@@ -74,6 +75,7 @@ public class AppSettings {
             ollamaBaseUrl = getString(data, "ollamaBaseUrl", "http://localhost:11434");
             targetLanguage = getString(data, "targetLanguage", "Hebrew (RTL)");
             skipHearingImpaired = getBoolean(data, "skipHearingImpaired", false);
+            translationBatchSize = getInt(data, "translationBatchSize", 20);
             smbHost = getString(data, "smbHost", "");
             smbShare = getString(data, "smbShare", "");
             smbUsername = getString(data, "smbUsername", "");
@@ -102,6 +104,7 @@ public class AppSettings {
             data.put("ollamaBaseUrl", ollamaBaseUrl);
             data.put("targetLanguage", targetLanguage);
             data.put("skipHearingImpaired", skipHearingImpaired);
+            data.put("translationBatchSize", translationBatchSize);
             data.put("smbHost", smbHost);
             data.put("smbShare", smbShare);
             data.put("smbUsername", smbUsername);
@@ -124,6 +127,14 @@ public class AppSettings {
         Object value = data.get(key);
         if (value instanceof Boolean) {
             return (Boolean) value;
+        }
+        return defaultValue;
+    }
+
+    private int getInt(Map<String, Object> data, String key, int defaultValue) {
+        Object value = data.get(key);
+        if (value instanceof Number) {
+            return ((Number) value).intValue();
         }
         return defaultValue;
     }
@@ -207,6 +218,14 @@ public class AppSettings {
 
     public void setSkipHearingImpaired(boolean skip) {
         this.skipHearingImpaired = skip;
+    }
+
+    public int getTranslationBatchSize() {
+        return translationBatchSize;
+    }
+
+    public void setTranslationBatchSize(int size) {
+        this.translationBatchSize = Math.max(1, Math.min(50, size)); // Clamp between 1-50
     }
 
     public String getSmbHost() {
