@@ -160,17 +160,29 @@ public class StatusController {
         // Active translations section
         Map<String, TranslationProgress> active = progressTracker.getActiveTranslations();
         if (!active.isEmpty()) {
-            html.append("<div class=\"status-card\"><h2>⏳ Translations In Progress</h2>");
-            // Desktop table
-            html.append("<table class='desktop-table'><tr><th>File</th><th>Progress</th><th>Elapsed</th></tr>");
+            html.append("<div class=\"status-card\"><h2>⏳ Translations</h2>");
+            // Desktop table with Status column
+            html.append(
+                    "<table class='desktop-table'><tr><th>File</th><th>Status</th><th>Progress</th><th>Elapsed</th></tr>");
             for (TranslationProgress p : active.values()) {
                 long sec = Duration.between(p.startTime(), Instant.now()).toSeconds();
                 String elapsed = sec < 60 ? sec + "s" : (sec / 60) + "m " + (sec % 60) + "s";
                 int pct = p.progressPercent();
+                boolean isPending = p.status() == TranslationProgressTracker.TranslationStatus.PENDING;
+
                 html.append("<tr><td>").append(p.fileName()).append("</td>");
-                html.append("<td><div class='progress-bar'><div class='progress-fill' style='width:").append(pct)
-                        .append("%'></div></div> ").append(pct).append("%</td>");
-                html.append("<td>").append(elapsed).append("</td></tr>");
+                // Status badge
+                if (isPending) {
+                    html.append(
+                            "<td><span style='background:#ff9f43;color:#1a1a2e;padding:4px 10px;border-radius:4px;font-size:0.85em'>⏸ Pending</span></td>");
+                    html.append("<td>-</td>");
+                } else {
+                    html.append(
+                            "<td><span style='background:#00ff88;color:#1a1a2e;padding:4px 10px;border-radius:4px;font-size:0.85em'>▶ Active</span></td>");
+                    html.append("<td><div class='progress-bar'><div class='progress-fill' style='width:").append(pct)
+                            .append("%'></div></div> ").append(pct).append("%</td>");
+                }
+                html.append("<td>").append(isPending ? "waiting" : elapsed).append("</td></tr>");
             }
             html.append("</table>");
             // Mobile cards
@@ -179,14 +191,30 @@ public class StatusController {
                 long sec = Duration.between(p.startTime(), Instant.now()).toSeconds();
                 String elapsed = sec < 60 ? sec + "s" : (sec / 60) + "m " + (sec % 60) + "s";
                 int pct = p.progressPercent();
+                boolean isPending = p.status() == TranslationProgressTracker.TranslationStatus.PENDING;
+
                 html.append("<div class='mobile-card'>");
                 html.append("<div class='mobile-card-title'>").append(p.fileName()).append("</div>");
-                html.append("<div class='mobile-card-row'><span class='mobile-card-label'>Progress</span><span>")
-                        .append(pct).append("%</span></div>");
-                html.append("<div class='progress-bar' style='width:100%'><div class='progress-fill' style='width:")
-                        .append(pct).append("%'></div></div>");
-                html.append("<div class='mobile-card-row'><span class='mobile-card-label'>Elapsed</span><span>")
-                        .append(elapsed).append("</span></div>");
+                // Status row
+                html.append("<div class='mobile-card-row'><span class='mobile-card-label'>Status</span>");
+                if (isPending) {
+                    html.append(
+                            "<span style='background:#ff9f43;color:#1a1a2e;padding:2px 8px;border-radius:4px'>⏸ Pending</span>");
+                } else {
+                    html.append(
+                            "<span style='background:#00ff88;color:#1a1a2e;padding:2px 8px;border-radius:4px'>▶ Active</span>");
+                }
+                html.append("</div>");
+
+                if (!isPending) {
+                    html.append("<div class='mobile-card-row'><span class='mobile-card-label'>Progress</span><span>")
+                            .append(pct).append("%</span></div>");
+                    html.append("<div class='progress-bar' style='width:100%'><div class='progress-fill' style='width:")
+                            .append(pct).append("%'></div></div>");
+                }
+                html.append("<div class='mobile-card-row'><span class='mobile-card-label'>")
+                        .append(isPending ? "Queue" : "Elapsed").append("</span><span>")
+                        .append(isPending ? "waiting" : elapsed).append("</span></div>");
                 html.append("</div>");
             }
             html.append("</div>");

@@ -197,18 +197,41 @@ public class FfmpegService {
      */
     public record SubtitleTrack(int index, String language, String codec, String title) {
 
+        @com.fasterxml.jackson.annotation.JsonGetter("displayName")
         public String displayName() {
             StringBuilder sb = new StringBuilder();
             if (title != null && !title.isEmpty()) {
                 sb.append(title);
+            } else if (language != null && !language.isEmpty() && !language.equals("und")) {
+                // Use language as display name if no title
+                sb.append(getLanguageDisplayName());
             } else {
                 sb.append("Track ").append(index + 1);
             }
-            sb.append(" (").append(language.toUpperCase()).append(")");
-            if (codec != null) {
-                sb.append(" [").append(codec).append("]");
-            }
             return sb.toString();
+        }
+
+        @com.fasterxml.jackson.annotation.JsonGetter("languageDisplay")
+        public String getLanguageDisplayName() {
+            if (language == null || language.isEmpty() || language.equals("und")) {
+                return "Unknown";
+            }
+            // Convert language codes to readable names
+            return switch (language.toLowerCase()) {
+                case "eng", "en" -> "English";
+                case "rus", "ru" -> "Russian";
+                case "heb", "he" -> "Hebrew";
+                case "spa", "es" -> "Spanish";
+                case "fra", "fr" -> "French";
+                case "deu", "de" -> "German";
+                case "ita", "it" -> "Italian";
+                case "por", "pt" -> "Portuguese";
+                case "jpn", "ja" -> "Japanese";
+                case "kor", "ko" -> "Korean";
+                case "zho", "zh" -> "Chinese";
+                case "ara", "ar" -> "Arabic";
+                default -> language.toUpperCase();
+            };
         }
     }
 }

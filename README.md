@@ -2,6 +2,46 @@
 
 A subtitle translation service that **fetches English subtitles from OpenSubtitles.org and translates them to any popular language** using AI models running locally via **Ollama** or cloud-based via **OpenAI**.
 
+## 🆕 What's New (January 2026)
+
+### Manual Workflow (Works with Any Player!)
+Translate subtitles for **any video player** (Infuse, VLC, Plex, etc.) - not just Kodi/Stremio:
+- **NAS File Browser** - traverse your entire NAS via SMB
+- **Zeroconf/Bonjour discovery** - automatically finds NAS devices on your network
+- Browse folders → select videos → extract & translate embedded subtitles
+- Translated files saved directly next to videos on NAS
+
+### Batch Folder Translation
+Translate all videos with English embedded subtitles in a folder with one click:
+- Browse to any folder → Click **"📁 Batch Translate Folder"**
+- Analyzes all videos (header-only, fast) to find English tracks
+- Shows dual progress: overall (videos) + current file (entries)
+- Temp files cleaned after each video to save storage
+
+### Translation Queue System
+- Only one translation at a time (prevents conflicts)
+- Additional requests show as **⏸ Pending** with orange badge
+- Active translation shows **▶ Active** with green badge and progress
+
+### Embedded Subtitle Caching
+- Now caches translated embedded subtitles locally
+- Cache location: `~/.subtitle-cache/embedded_{filename}_track{N}/`
+- Appears in Status page cache list
+
+### Improved UI
+- Language badges on all subtitle tracks (green=English, orange=other)
+- Shows ALL embedded tracks (not just English) with language indicator
+- Better status page with pending/active translation display
+
+### Robustness Improvements
+- Batch translation parsing now handles corrupted markers with fallback
+- Multi-line hearing impaired annotations (`[MUSIC\nPLAYS]`) now detected
+- Model configuration logged on startup
+
+### Zero Configuration
+- **No environment variables needed!** Everything is configured via the Settings UI
+- Settings persisted in `~/.subtitle-cache/app-settings.json`
+
 ## How It Works
 
 ```

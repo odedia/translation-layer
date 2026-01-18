@@ -9,6 +9,7 @@ import com.example.translationlayer.service.OpenSubtitlesClient;
 import com.example.translationlayer.service.SmbService;
 import com.example.translationlayer.service.SubtitleService;
 import com.example.translationlayer.service.TranslationProgressTracker;
+import com.example.translationlayer.service.BatchTranslationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -38,11 +39,13 @@ public class FileBrowserController {
         private final NasDiscoveryService nasDiscoveryService;
         private final FfmpegService ffmpegService;
         private final TranslationProgressTracker progressTracker;
+        private final BatchTranslationService batchTranslationService;
 
         public FileBrowserController(SmbConfig smbConfig, SmbService smbService,
                         LanguageConfig languageConfig, OpenSubtitlesClient openSubtitlesClient,
                         SubtitleService subtitleService, NasDiscoveryService nasDiscoveryService,
-                        FfmpegService ffmpegService, TranslationProgressTracker progressTracker) {
+                        FfmpegService ffmpegService, TranslationProgressTracker progressTracker,
+                        BatchTranslationService batchTranslationService) {
                 this.smbConfig = smbConfig;
                 this.smbService = smbService;
                 this.languageConfig = languageConfig;
@@ -51,6 +54,7 @@ public class FileBrowserController {
                 this.nasDiscoveryService = nasDiscoveryService;
                 this.ffmpegService = ffmpegService;
                 this.progressTracker = progressTracker;
+                this.batchTranslationService = batchTranslationService;
         }
 
         // ==================== REST API Endpoints ====================
@@ -182,15 +186,11 @@ public class FileBrowserController {
                         tempFile = smbService.downloadHeaderToTempFile(videoPath);
                         var tracks = ffmpegService.getSubtitleTracks(tempFile);
 
-                        // Filter to English tracks only
-                        var englishTracks = tracks.stream()
-                                        .filter(t -> ffmpegService.isEnglish(t.language()))
-                                        .toList();
-
+                        // Return all tracks - let user choose. English tracks will be highlighted in
+                        // UI.
                         return ResponseEntity.ok(Map.of(
                                         "available", true,
-                                        "tracks", englishTracks,
-                                        "allTracks", tracks));
+                                        "tracks", tracks));
 
                 } catch (Exception e) {
                         log.error("Failed to get embedded tracks", e);
@@ -213,16 +213,44 @@ public class FileBrowserController {
                         log.info("Extracting embedded subtitle track {} from: {}", request.trackIndex(),
                                         request.videoPath());
 
-                        // Download video to temp file
-                        tempFile = smbService.downloadToTempFile(request.videoPath());
+                        // Generate a cache key from video filename
+                        String videoFileName = Path.of(request.videoPath()).getFileName().toString();
+                        String cacheId = "embedded_" + videoFileName.replaceAll("[^a-zA-Z0-9._-]", "_") + "_track"
+                                        + request.trackIndex();
 
-                        // Extract subtitle track
-                        String subtitleContent = ffmpegService.extractSubtitle(tempFile, request.trackIndex());
+                        // Check if already cached
+                        Path cacheDir = Path.of(System.getProperty("user.home"), ".subtitle-cache", cacheId);
+                        Path translatedPath = cacheDir.resolve("translated_he.srt");
 
-                        // Translate the content (uses progress tracker internally)
-                        String translatedContent = subtitleService.translateSubtitleContent(
-                                        subtitleContent,
-                                        languageConfig.getTargetLanguage());
+                        String translatedContent;
+                        if (Files.exists(translatedPath)) {
+                                log.info("Returning cached embedded translation for: {}", cacheId);
+                                translatedContent = Files.readString(translatedPath);
+                        } else {
+                                // Download video to temp file
+                                tempFile = smbService.downloadToTempFile(request.videoPath());
+
+                                // Extract subtitle track
+                                String subtitleContent = ffmpegService.extractSubtitle(tempFile, request.trackIndex());
+
+                                // Translate the content (uses progress tracker internally)
+                                translatedContent = subtitleService.translateSubtitleContent(
+                                                subtitleContent,
+                                                languageConfig.getTargetLanguage());
+
+                                // Cache both original and translated
+                                Files.createDirectories(cacheDir);
+                                Files.writeString(cacheDir.resolve("original.srt"), subtitleContent);
+                                Files.writeString(translatedPath, translatedContent);
+                                // Save metadata
+                                String metadataJson = String.format(
+                                                "{\"fileName\":\"%s\",\"videoPath\":\"%s\",\"trackIndex\":%d}",
+                                                videoFileName.replace("\\", "\\\\").replace("\"", "\\\""),
+                                                request.videoPath().replace("\\", "\\\\").replace("\"", "\\\""),
+                                                request.trackIndex());
+                                Files.writeString(cacheDir.resolve("metadata.json"), metadataJson);
+                                log.info("Cached embedded subtitle translation: {}", cacheId);
+                        }
 
                         // Save to NAS next to video
                         String languageCode = languageConfig.getLanguageCode();
@@ -252,7 +280,72 @@ public class FileBrowserController {
         @ResponseBody
         public ResponseEntity<?> getProgress() {
                 var translations = progressTracker.getActiveTranslations();
-                return ResponseEntity.ok(Map.of("translations", translations));
+                var batchProgress = batchTranslationService.getBatchProgress();
+                return ResponseEntity.ok(Map.of(
+                                "translations", translations,
+                                "batch", batchProgress != null ? batchProgress : Map.of()));
+        }
+
+        // ==================== Batch Translation Endpoints ====================
+
+        @PostMapping("/api/browse/batch-analyze")
+        @ResponseBody
+        public ResponseEntity<?> batchAnalyze(@RequestBody Map<String, String> request) {
+                try {
+                        String folderPath = request.get("folderPath");
+                        if (folderPath == null || folderPath.isBlank()) {
+                                return ResponseEntity.badRequest().body(Map.of("error", "folderPath is required"));
+                        }
+                        log.info("Starting batch analysis for folder: {}", folderPath);
+                        var result = batchTranslationService.analyzeFolder(folderPath);
+                        return ResponseEntity.ok(Map.of(
+                                        "success", true,
+                                        "totalVideos", result.totalVideos(),
+                                        "videos", result.videos()));
+                } catch (Exception e) {
+                        log.error("Batch analysis failed", e);
+                        return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+                }
+        }
+
+        @PostMapping("/api/browse/batch-start")
+        @ResponseBody
+        public ResponseEntity<?> batchStart() {
+                try {
+                        String targetLanguage = languageConfig.getTargetLanguage();
+                        log.info("Starting batch translation to: {}", targetLanguage);
+                        batchTranslationService.startBatchTranslation(targetLanguage);
+                        return ResponseEntity.ok(Map.of("success", true, "message", "Batch translation started"));
+                } catch (Exception e) {
+                        log.error("Failed to start batch translation", e);
+                        return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+                }
+        }
+
+        @GetMapping("/api/browse/batch-progress")
+        @ResponseBody
+        public ResponseEntity<?> batchProgress() {
+                var progress = batchTranslationService.getBatchProgress();
+                if (progress == null) {
+                        return ResponseEntity.ok(Map.of("active", false));
+                }
+                return ResponseEntity.ok(Map.of(
+                                "active", true,
+                                "batchId", progress.batchId(),
+                                "folderPath", progress.folderPath(),
+                                "totalVideos", progress.totalVideos(),
+                                "completedVideos", progress.completedVideos(),
+                                "currentVideo", progress.currentVideo() != null ? progress.currentVideo() : "",
+                                "progressPercent", progress.progressPercent(),
+                                "status", progress.status().name(),
+                                "error", progress.error() != null ? progress.error() : ""));
+        }
+
+        @PostMapping("/api/browse/batch-cancel")
+        @ResponseBody
+        public ResponseEntity<?> batchCancel() {
+                batchTranslationService.cancelBatch();
+                return ResponseEntity.ok(Map.of("success", true, "message", "Batch cancelled"));
         }
 
         @PostMapping("/api/browse/translate-local")
@@ -543,6 +636,10 @@ public class FileBrowserController {
                 html.append(
                                 "html+='<span>›</span><a href=\"#\" onclick=\"loadDirectory(\\''+p+'\\');return false\">'+part+'</a>';});}");
                 html.append("html+='</div>';");
+                // Batch translate button (only show in non-root folders)
+                html.append("if(currentPath){");
+                html.append("html+='<button class=\"btn btn-secondary\" onclick=\"startBatchAnalysis()\" style=\"margin-bottom:12px;background:#00d9ff\">📁 Batch Translate Folder</button>';");
+                html.append("}");
                 // File list
                 html.append("html+='<ul class=\"file-list\">';");
                 html.append("if(entries.length===0){html+='<li class=\"status-msg\">No files found</li>';}");
@@ -606,8 +703,11 @@ public class FileBrowserController {
                 html.append("html+='<p style=\"font-size:0.85em;color:#888;margin-bottom:12px\">These are perfectly synced with your video.</p>';");
                 html.append("html+='<ul class=\"subtitle-list\">';");
                 html.append("tracks.forEach(t=>{");
+                html.append("let isEng=(t.language||'').toLowerCase()==='eng'||(t.language||'').toLowerCase()==='en';");
+                html.append("let langBadge=t.languageDisplay||t.language||'Unknown';");
+                html.append("let badgeColor=isEng?'#00ff88':'#ff9f43';");
                 html.append("html+='<li class=\"subtitle-item\">';");
-                html.append("html+='<div class=\"subtitle-name\">'+t.displayName+'</div>';");
+                html.append("html+='<div class=\"subtitle-name\">'+t.displayName+' <span style=\"background:'+badgeColor+';color:#1a1a2e;font-size:0.75em;padding:2px 8px;border-radius:4px;margin-left:8px\">'+langBadge+'</span></div>';");
                 html.append("html+='<div class=\"subtitle-meta\">Codec: '+(t.codec||'unknown')+'</div>';");
                 html.append("html+='<button class=\"btn btn-primary subtitle-btn\" onclick=\"translateEmbedded('+t.index+')\">Extract & Translate</button>';");
                 html.append("html+='</li>';});");
@@ -696,6 +796,79 @@ public class FileBrowserController {
                 html.append("document.getElementById('browser').innerHTML='<div class=\"status-msg\"><span class=\"spinner\"></span> Searching: '+query+'...</div>';");
                 html.append("fetch('/api/browse/search-manual?query='+encodeURIComponent(query)).then(r=>r.json()).then(renderSubtitles).catch(e=>{");
                 html.append("document.getElementById('browser').innerHTML='<div class=\"error-msg\">'+e.message+'</div>';});");
+                html.append("}");
+
+                // ==================== Batch Translation Functions ====================
+
+                // Start batch analysis
+                html.append("function startBatchAnalysis(){");
+                html.append("document.getElementById('browser').innerHTML='<div class=\"status-msg\"><span class=\"spinner\"></span> Analyzing folder for videos with English subtitles...</div>';");
+                html.append("fetch('/api/browse/batch-analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({folderPath:currentPath})})");
+                html.append(".then(r=>r.json()).then(r=>{");
+                html.append("if(r.error){document.getElementById('browser').innerHTML='<div class=\"error-msg\">'+r.error+'</div><button class=\"btn btn-secondary\" onclick=\"loadDirectory(\\''+currentPath+'\\')\" style=\"max-width:200px;margin:12px auto;display:block\">Back</button>';return;}");
+                html.append("renderBatchAnalysis(r);");
+                html.append("}).catch(e=>{document.getElementById('browser').innerHTML='<div class=\"error-msg\">'+e.message+'</div>';});");
+                html.append("}");
+
+                // Render batch analysis results
+                html.append("function renderBatchAnalysis(result){");
+                html.append("let html='<div class=\"breadcrumb\"><a href=\"#\" onclick=\"loadDirectory(\\''+currentPath+'\\');return false\">← Back</a></div>';");
+                html.append("html+='<div class=\"card\"><h2 style=\"color:#00d9ff\">📁 Batch Translation</h2>';");
+                html.append("html+='<p style=\"color:#888;margin-bottom:12px\">Found <strong>'+result.totalVideos+'</strong> videos with English subtitles</p>';");
+                html.append("if(result.totalVideos===0){html+='<p style=\"color:#ff6b6b\">No videos with English subtitles found in this folder.</p></div>';");
+                html.append("document.getElementById('browser').innerHTML=html;return;}");
+                html.append("html+='<ul class=\"subtitle-list\" style=\"max-height:300px;overflow-y:auto;margin-bottom:12px\">';");
+                html.append("result.videos.forEach(v=>{html+='<li class=\"subtitle-item\" style=\"padding:8px\"><span>🎬 '+v.fileName+'</span></li>';});");
+                html.append("html+='</ul>';");
+                html.append("html+='<button class=\"btn btn-primary\" onclick=\"startBatchTranslation()\" style=\"margin-right:8px\">🚀 Start Translation</button>';");
+                html.append("html+='<button class=\"btn btn-secondary\" onclick=\"loadDirectory(\\''+currentPath+'\\')\">Cancel</button>';");
+                html.append("html+='</div>';");
+                html.append("document.getElementById('browser').innerHTML=html;");
+                html.append("}");
+
+                // Start batch translation
+                html.append("function startBatchTranslation(){");
+                html.append("fetch('/api/browse/batch-start',{method:'POST'}).then(r=>r.json()).then(r=>{");
+                html.append("if(r.error){alert('Error: '+r.error);return;}");
+                html.append("showBatchProgress();");
+                html.append("startBatchProgressPolling();");
+                html.append("});");
+                html.append("}");
+
+                // Show batch progress UI
+                html.append("function showBatchProgress(){");
+                html.append("let html='<div class=\"card\"><h2 style=\"color:#00d9ff\">📁 Batch Translation in Progress</h2>';");
+                html.append("html+='<div id=\"batch-status\"></div>';");
+                html.append("html+='<div style=\"margin:16px 0\"><p style=\"color:#888;font-size:0.9em\">Overall Progress</p>';");
+                html.append("html+='<div class=\"progress-bar\" style=\"height:24px\"><div id=\"batch-overall\" class=\"progress-fill\" style=\"width:0%\"></div></div>';");
+                html.append("html+='<p id=\"batch-overall-text\" style=\"color:#888;font-size:0.85em;margin-top:4px\">0/0 videos</p></div>';");
+                html.append("html+='<div style=\"margin:16px 0\"><p style=\"color:#888;font-size:0.9em\">Current File</p>';");
+                html.append("html+='<p id=\"batch-current\" style=\"color:#00d9ff;font-weight:bold\">Starting...</p>';");
+                html.append("html+='<div class=\"progress-bar\" style=\"height:20px\"><div id=\"batch-file\" class=\"progress-fill\" style=\"width:0%\"></div></div></div>';");
+                html.append("html+='<button class=\"btn btn-secondary\" onclick=\"cancelBatch()\" style=\"background:#ff4757\">Cancel Batch</button>';");
+                html.append("html+='</div>';");
+                html.append("document.getElementById('browser').innerHTML=html;");
+                html.append("}");
+
+                // Batch progress polling
+                html.append("var batchInterval=null;");
+                html.append("function startBatchProgressPolling(){");
+                html.append("batchInterval=setInterval(function(){");
+                html.append("fetch('/api/browse/batch-progress').then(r=>r.json()).then(p=>{");
+                html.append("if(!p.active){stopBatchProgressPolling();loadDirectory(currentPath);return;}");
+                html.append("document.getElementById('batch-overall').style.width=p.progressPercent+'%';");
+                html.append("document.getElementById('batch-overall-text').textContent=p.completedVideos+'/'+p.totalVideos+' videos';");
+                html.append("document.getElementById('batch-current').textContent=p.currentVideo||'Processing...';");
+                html.append("document.getElementById('batch-status').innerHTML='<p style=\"color:'+(p.status==='TRANSLATING'?'#00ff88':'#ff9f43')+'\">'+p.status+'</p>';");
+                html.append("if(p.status==='COMPLETED'||p.status==='FAILED'||p.status==='CANCELLED'){stopBatchProgressPolling();");
+                html.append("setTimeout(function(){loadDirectory(currentPath);},2000);}");
+                html.append("});},3000);}");
+                html.append("function stopBatchProgressPolling(){if(batchInterval){clearInterval(batchInterval);batchInterval=null;}}");
+
+                // Cancel batch
+                html.append("function cancelBatch(){");
+                html.append("if(!confirm('Cancel batch translation?'))return;");
+                html.append("fetch('/api/browse/batch-cancel',{method:'POST'}).then(()=>{stopBatchProgressPolling();loadDirectory(currentPath);});");
                 html.append("}");
 
                 html.append("</script>");

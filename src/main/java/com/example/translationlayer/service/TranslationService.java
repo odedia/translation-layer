@@ -39,12 +39,13 @@ public class TranslationService {
     private String chatProvider;
 
     // Auto-tuned based on provider
-    private int batchSize;
     private int parallelThreads;
 
     // Pattern to detect hearing impaired annotations like [music playing] or (door
     // slams)
-    private static final Pattern HEARING_IMPAIRED_PATTERN = Pattern.compile("^\\s*[\\[\\(][^\\]\\)]+[\\]\\)]\\s*$");
+    // This pattern matches complete text that is ONLY a bracketed annotation
+    private static final Pattern HEARING_IMPAIRED_PATTERN = Pattern.compile(
+            "^\\s*[\\[\\(][^\\]\\)]+[\\]\\)]\\s*$", Pattern.DOTALL);
 
     // Patterns to detect and remove chatty prefixes
     private static final Pattern[] CHATTY_PATTERNS = {
@@ -70,12 +71,17 @@ public class TranslationService {
 
     @jakarta.annotation.PostConstruct
     private void init() {
-        // Auto-tune based on provider
+        // Auto-tune parallel threads based on provider
         boolean isOpenAI = "openai".equalsIgnoreCase(chatProvider);
         // OpenAI: high concurrency; Ollama: moderate (can adjust based on hardware)
-        this.batchSize = isOpenAI ? 50 : 20;
         this.parallelThreads = isOpenAI ? 8 : 6;
-        log.info("Using {} provider - batch size: {}, threads: {}", chatProvider, batchSize, parallelThreads);
+
+        // Log startup configuration including model details from settings
+        String activeModel = appSettings.getActiveModel();
+        String provider = appSettings.getModelProvider();
+        int configuredBatchSize = appSettings.getTranslationBatchSize();
+        log.info("TranslationService initialized - Provider: {}, Model: {}, Batch size: {}, Threads: {}",
+                provider, activeModel, configuredBatchSize, parallelThreads);
     }
 
     private synchronized ExecutorService getExecutor() {
@@ -360,7 +366,8 @@ public class TranslationService {
         List<SubtitleEntry> result = new ArrayList<>();
 
         // Pattern to match <<~N~>> followed by translated text
-        Pattern markerPattern = Pattern.compile("<<~(\\d+)~>>\\s*(.+?)(?=<<~\\d+~>>|$)", Pattern.DOTALL);
+        // Also try to match partial/corrupted markers like <<~N (without closing)
+        Pattern markerPattern = Pattern.compile("<<~(\\d+)~?>>?\\s*(.+?)(?=<<~\\d+|$)", Pattern.DOTALL);
         java.util.regex.Matcher matcher = markerPattern.matcher(response);
 
         // Build a map of index -> translated text
@@ -368,9 +375,21 @@ public class TranslationService {
         while (matcher.find()) {
             int index = Integer.parseInt(matcher.group(1));
             String translatedText = matcher.group(2).trim();
-            // Clean up the translated text
+            // Clean up the translated text - remove any leftover partial markers
+            translatedText = translatedText.replaceAll("<<~\\d*~?>>?", "").trim();
             translatedText = cleanTranslationResponse(translatedText, "");
-            translations.put(index, translatedText);
+            if (!translatedText.isBlank()) {
+                translations.put(index, translatedText);
+            }
+        }
+
+        // Check if we got enough translations - if not, fall back to individual
+        int successCount = translations.size();
+        double successRate = (double) successCount / batch.size();
+        if (successRate < 0.8) {
+            log.warn("Batch parsing only found {}/{} entries ({}%), falling back to individual translation",
+                    successCount, batch.size(), Math.round(successRate * 100));
+            return translateBatchIndividually(batch);
         }
 
         // Map translations back to entries
@@ -388,9 +407,10 @@ public class TranslationService {
                 translatedText = rtlTextProcessor.processRtlText(translatedText);
                 result.add(entry.withTranslatedText(translatedText));
             } else {
-                // If no translation found, keep original or translate individually
-                log.warn("No translation found for cue {}, using original", i);
-                result.add(entry);
+                // If no translation found, use individual translation for this entry
+                log.warn("No translation found for cue {}, translating individually", i);
+                String individualTranslation = translateText(entry.text());
+                result.add(entry.withTranslatedText(individualTranslation));
             }
         }
 
@@ -473,9 +493,25 @@ public class TranslationService {
     /**
      * Check if text contains only hearing impaired annotations (e.g., [music
      * playing]).
+     * Handles multi-line brackets like:
+     * [CLASSICAL MUSIC
+     * PLAYS OVER RADIO]
      */
     private boolean isHearingImpairedOnly(String text) {
-        // Check each line - if ALL lines are hearing impaired annotations, skip
+        if (text == null || text.isBlank()) {
+            return false;
+        }
+
+        // Join all lines to handle multi-line brackets
+        String joined = text.replace("\n", " ").trim();
+
+        // Check if the entire text is just a bracketed annotation
+        // Pattern: starts with [ or (, ends with ] or ), no nested brackets
+        if (HEARING_IMPAIRED_PATTERN.matcher(joined).matches()) {
+            return true;
+        }
+
+        // Also check each line individually for single-line annotations
         String[] lines = text.split("\n");
         for (String line : lines) {
             String trimmed = line.trim();
