@@ -19,20 +19,22 @@ public class SubtitleParser {
     private static final Logger log = LoggerFactory.getLogger(SubtitleParser.class);
 
     // SRT format: index, timestamp line, text lines, blank line
+    // NOTE: Do NOT use Pattern.MULTILINE - it makes $ match end-of-line instead of
+    // end-of-string,
+    // which causes multi-line subtitle text to be truncated
     private static final Pattern SRT_ENTRY_PATTERN = Pattern.compile(
             "(\\d+)\\s*\\n" + // Index
                     "(\\d{2}:\\d{2}:\\d{2},\\d{3})\\s*-->\\s*" + // Start time
                     "(\\d{2}:\\d{2}:\\d{2},\\d{3})\\s*\\n" + // End time
-                    "([\\s\\S]*?)(?=\\n\\n|\\n?$)", // Text content
-            Pattern.MULTILINE);
+                    "([\\s\\S]*?)(?=\\n\\n|$)"); // Text content - stop at double newline or end
 
     // VTT format: optional index, timestamp line (with . instead of ,), text lines
+    // NOTE: Do NOT use Pattern.MULTILINE - see SRT pattern comment above
     private static final Pattern VTT_ENTRY_PATTERN = Pattern.compile(
             "(?:(\\d+)\\s*\\n)?" + // Optional index
                     "(\\d{2}:\\d{2}:\\d{2}\\.\\d{3})\\s*-->\\s*" + // Start time (with .)
                     "(\\d{2}:\\d{2}:\\d{2}\\.\\d{3})\\s*\\n" + // End time (with .)
-                    "([\\s\\S]*?)(?=\\n\\n|\\n?$)", // Text content
-            Pattern.MULTILINE);
+                    "([\\s\\S]*?)(?=\\n\\n|$)"); // Text content - stop at double newline or end
 
     /**
      * Parses an SRT file content into a list of SubtitleEntry objects.
@@ -56,6 +58,12 @@ public class SubtitleParser {
                 String startTime = matcher.group(2);
                 String endTime = matcher.group(3);
                 String text = matcher.group(4).trim();
+
+                // Debug: log multi-line entries
+                if (text.contains("\n")) {
+                    log.debug("Entry {} has multi-line text ({} lines): {}",
+                            index, text.split("\n").length, text.replace("\n", "\\n"));
+                }
 
                 entries.add(new SubtitleEntry(index, startTime, endTime, text));
             } catch (NumberFormatException e) {

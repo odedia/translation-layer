@@ -1,5 +1,6 @@
 package com.example.translationlayer.service;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -21,6 +22,7 @@ public class TranslationProgressTracker {
             int completedEntries,
             Instant startTime) {
 
+        @JsonProperty("progressPercent")
         public int progressPercent() {
             if (totalEntries == 0)
                 return 0;

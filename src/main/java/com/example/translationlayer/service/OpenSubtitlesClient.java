@@ -1,5 +1,6 @@
 package com.example.translationlayer.service;
 
+import com.example.translationlayer.config.AppSettings;
 import com.example.translationlayer.model.SubtitleSearchResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,28 +27,22 @@ public class OpenSubtitlesClient {
     @Value("${opensubtitles.base-url:https://api.opensubtitles.com/api/v1}")
     private String baseUrl;
 
-    @Value("${opensubtitles.username}")
-    private String username;
-
-    @Value("${opensubtitles.password}")
-    private String password;
-
-    @Value("${opensubtitles.api-key:}")
-    private String apiKey;
-
+    private final AppSettings appSettings;
     private final RestClient restClient;
     private final JsonMapper jsonMapper;
 
     private String authToken;
 
-    public OpenSubtitlesClient(RestClient.Builder restClientBuilder) {
+    public OpenSubtitlesClient(RestClient.Builder restClientBuilder, AppSettings appSettings) {
         this.restClient = restClientBuilder.build();
         this.jsonMapper = JsonMapper.builder().build();
+        this.appSettings = appSettings;
     }
 
     @PostConstruct
     public void init() {
         // Login on startup if credentials are provided
+        String username = appSettings.getOpenSubtitlesUsername();
         if (username != null && !username.isBlank()) {
             try {
                 login();
@@ -61,6 +56,9 @@ public class OpenSubtitlesClient {
      * Authenticate with OpenSubtitles and get JWT token.
      */
     public void login() {
+        String username = appSettings.getOpenSubtitlesUsername();
+        String password = appSettings.getOpenSubtitlesPassword();
+
         log.info("Logging in to OpenSubtitles as user: {}", username);
 
         Map<String, String> body = Map.of(
@@ -239,6 +237,7 @@ public class OpenSubtitlesClient {
     private void addCommonHeaders(HttpHeaders headers) {
         headers.set("User-Agent", "TranslationLayer v1.0");
         headers.set("Accept", "application/json");
+        String apiKey = appSettings.getOpenSubtitlesApiKey();
         if (apiKey != null && !apiKey.isBlank()) {
             headers.set("Api-Key", apiKey);
         }

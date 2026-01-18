@@ -23,8 +23,11 @@ Kodi → Translation Layer → OpenSubtitles.org (fetch English)
 - ✅ **Translates to 55 languages** including Hebrew, Arabic, Spanish, French, German, Chinese, Japanese, Hindi, and more
 - ✅ **Automatic RTL support** for Hebrew, Arabic, Persian, Urdu, and Pashto
 - ✅ **Multiple AI backends**: Local Ollama or cloud OpenAI
+- ✅ **Settings UI**: Configure everything from the web interface
+- ✅ **File Browser**: Browse NAS via SMB and translate files directly
+- ✅ **Embedded subtitle detection**: Extract and translate subtitles from MKV/MP4 files
+- ✅ **Hearing impaired filter**: Skip [music], [sound effects] annotations
 - ✅ **Caches translations** to avoid re-translating
-- ✅ **Web dashboard** to monitor translation progress
 - ✅ **OpenSubtitles.com REST API** compatible
 - ✅ **Kodi add-on** included
 - ✅ **Stremio add-on** included
@@ -63,45 +66,50 @@ TranslateGemma is Google's specialized translation model based on Gemma 3. Avail
 
 ## Quick Start
 
-### 1. Set Environment Variables
-
-You need an OpenSubtitles.com account and API key:
-1. Create an account at [opensubtitles.com](https://www.opensubtitles.com)
-2. Go to your profile → **API Consumers** → **Create new consumer**
-3. Copy your API key
+### 1. Build and Run the Application
 
 ```bash
-# Required - OpenSubtitles credentials (get API key from opensubtitles.com/consumers)
-export OPEN_SUBTITLES_USERNAME="your-username"
-export OPEN_SUBTITLES_PASSWORD="your-password"
-export OPEN_SUBTITLES_API_KEY="your-api-key"
-
-# Optional - Only if using OpenAI instead of Ollama
-export OPENAI_API_KEY="sk-your-openai-key"
-
-# Optional - Custom OpenAI-compatible endpoint (e.g., Tanzu Platform, Azure OpenAI)
-export OPENAI_BASE_URL="https://your-custom-endpoint.com"
-```
-
-### 2. Build the Application
-
-```bash
+# Build
 ./mvnw clean package -DskipTests
-```
 
-### 3. Run the Application
-
-**Using Ollama (default):**
-```bash
+# Run
 ./mvnw spring-boot:run
 ```
 
-**Using OpenAI:**
+The service starts on `http://localhost:8080`.
+
+### 2. Configure Settings
+
+On first launch, you'll see a **"Setup Required"** banner. Click **Settings** to configure:
+
+![Settings Page](images/Settings.png)
+
+**Required Settings:**
+- **OpenSubtitles** - Enter your API key, username, and password
+  - Get credentials from [opensubtitles.com/consumers](https://www.opensubtitles.com/consumers)
+
+**AI Model Settings:**
+- **Ollama** (default, local): Configure base URL and model name
+  - Pull models directly from the Settings page
+- **OpenAI** (cloud): Enter your API key and select model
+
+**Translation Settings:**
+- **Target Language**: Choose from 55 supported languages
+- **Skip Hearing Impaired**: Filter out [music], [sound effects] annotations
+
+**NAS Connection** (optional):
+- Configure SMB/CIFS connection to browse and translate subtitles on your NAS
+
+### 3. Using with Ollama (Recommended)
+
+Make sure Ollama is running (`ollama serve`) with a TranslateGemma model:
+
 ```bash
-SPRING_AI_MODEL_CHAT=openai ./mvnw spring-boot:run
+# Pull a model (or use the Settings page to pull models)
+ollama pull translategemma:4b
 ```
 
-The service starts on `http://localhost:8080`. Visit the web dashboard to monitor translations.
+You can also use OpenAI by selecting it in the Settings page and entering your API key.
 
 ## Kodi Add-on Installation
 
@@ -174,60 +182,52 @@ See [stremio-addon/README.md](stremio-addon/README.md) for full documentation.
 
 ## Configuration
 
-All configuration is in `src/main/resources/application.yml`:
+Configuration is managed through the **Settings page** (`http://localhost:8080/settings`). Settings are persisted in `~/.subtitle-cache/app-settings.json`.
+
+### Settings Available
+
+| Setting | Description |
+|---------|-------------|
+| **OpenSubtitles** | API key, username, and password for subtitle downloads |
+| **AI Model** | Choose Ollama (local) or OpenAI (cloud) |
+| **Ollama Settings** | Base URL, model name, pull new models |
+| **OpenAI Settings** | API key, model selection |
+| **Target Language** | Choose from 55 supported languages |
+| **Hearing Impaired Filter** | Skip [music], [sound effects] annotations |
+| **NAS Connection** | SMB/CIFS settings for network file browsing |
+
+### Advanced Configuration
+
+For advanced settings, edit `src/main/resources/application.yml`:
 
 ```yaml
 server:
   port: 8080
 
-spring:
-  ai:
-    model:
-      chat: ollama  # Change to 'openai' for cloud translation
-    ollama:
-      base-url: http://localhost:11434
-      chat:
-        options:
-          model: translategemma:4b  # Options: 4b, 12b, 27b
-          temperature: 0.2
-    openai:
-      api-key: ${OPENAI_API_KEY:}
-      chat:
-        options:
-          model: gpt-4o-mini
-          temperature: 0.2
-
-opensubtitles:
-  base-url: https://api.opensubtitles.com/api/v1
-  username: ${OPEN_SUBTITLES_USERNAME:}
-  password: ${OPEN_SUBTITLES_PASSWORD:}
-  api-key: ${OPEN_SUBTITLES_API_KEY:}
-
 translation:
-  source-language: English
-  target-language: Hebrew  # Changed via web dashboard
   cache:
     enabled: true
     directory: ${HOME}/.subtitle-cache
 ```
 
-### Key Configuration Options
+## Web Pages
 
-| Setting | Description |
-|---------|-------------|
-| `spring.ai.model.chat` | `ollama` (local) or `openai` (cloud) |
-| `spring.ai.ollama.chat.options.model` | TranslateGemma model size |
-| `translation.cache.directory` | Where translated subtitles are cached |
+| URL | Description |
+|-----|-------------|
+| `/status` | Main dashboard - translation progress, cache management |
+| `/settings` | Settings page - all configuration |
+| `/browse` | File Browser - browse NAS and translate embedded subtitles |
 
 ## API Endpoints
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/status` | GET | Web dashboard with translation progress |
-| `/api/v1/subtitles` | GET | Search for subtitles |
+| `/api/v1/subtitles` | GET | Search for subtitles (Kodi/OpenSubtitles API) |
 | `/api/v1/download` | POST | Request subtitle download |
 | `/api/v1/download/{id}/{file}` | GET | Download translated subtitle |
-| `/language` | POST | Change target language |
+| `/api/settings` | GET/POST | Get/update settings |
+| `/api/browse/list` | GET | List files on NAS |
+| `/api/browse/embedded-tracks` | POST | Detect embedded subtitles |
 
 ## Project Structure
 

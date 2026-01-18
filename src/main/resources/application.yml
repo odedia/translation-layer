@@ -24,9 +24,7 @@ spring:
 
 opensubtitles:
   base-url: https://api.opensubtitles.com/api/v1
-  username: ${OPEN_SUBTITLES_USERNAME:}
-  password: ${OPEN_SUBTITLES_PASSWORD:}
-  api-key: ${OPEN_SUBTITLES_API_KEY:}
+  # Credentials are now managed in Settings UI
 
 translation:
   source-language: English
@@ -37,3 +35,7 @@ translation:
     enabled: true
     directory: ${HOME}/.subtitle-cache
   subtitle-directory: ./subtitles
+
+logging:
+  level:
+    com.example.translationlayer.service: DEBUG

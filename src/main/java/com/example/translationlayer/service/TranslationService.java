@@ -1,5 +1,6 @@
 package com.example.translationlayer.service;
 
+import com.example.translationlayer.config.AppSettings;
 import com.example.translationlayer.config.LanguageConfig;
 import com.example.translationlayer.model.SubtitleEntry;
 import org.slf4j.Logger;
@@ -28,6 +29,7 @@ public class TranslationService {
     private final ChatClient.Builder chatClientBuilder;
     private final RtlTextProcessor rtlTextProcessor;
     private final LanguageConfig languageConfig;
+    private final AppSettings appSettings;
     private ExecutorService executorService;
 
     @Value("${translation.source-language:English}")
@@ -39,6 +41,10 @@ public class TranslationService {
     // Auto-tuned based on provider
     private int batchSize;
     private int parallelThreads;
+
+    // Pattern to detect hearing impaired annotations like [music playing] or (door
+    // slams)
+    private static final Pattern HEARING_IMPAIRED_PATTERN = Pattern.compile("^\\s*[\\[\\(][^\\]\\)]+[\\]\\)]\\s*$");
 
     // Patterns to detect and remove chatty prefixes
     private static final Pattern[] CHATTY_PATTERNS = {
@@ -54,10 +60,11 @@ public class TranslationService {
     };
 
     public TranslationService(ChatClient.Builder chatClientBuilder, RtlTextProcessor rtlTextProcessor,
-            LanguageConfig languageConfig) {
+            LanguageConfig languageConfig, AppSettings appSettings) {
         this.chatClientBuilder = chatClientBuilder;
         this.rtlTextProcessor = rtlTextProcessor;
         this.languageConfig = languageConfig;
+        this.appSettings = appSettings;
         this.executorService = null; // Lazy init
     }
 
@@ -89,25 +96,22 @@ public class TranslationService {
         prompt.append(String.format("""
                 You are a professional subtitle translator translating to %s.
 
-                CRITICAL RULES:
-                - Output ONLY the translated %s text, nothing else
-                - NO greetings, NO explanations, NO notes, NO formatting markers
-                - NO phrases like "Here's the translation:" or "Translation:"
-                - PRESERVE LINE BREAKS EXACTLY: if input has 2 lines, output must have 2 lines
-                - Each line in the input corresponds to one line in the output
-                - Do NOT merge multiple lines into one line
-                - Do NOT wrap output in quotes or markdown
-                - If you see HTML tags like <i> or <b>, preserve them exactly
+                CRITICAL RULES - FOLLOW EXACTLY:
+                1. COMPLETE TRANSLATION - Translate EVERYTHING between [[[ and ]]] delimiters
+                2. The symbol || represents a line break - keep it as || in your output
+                3. Do NOT skip, summarize, or shorten ANY content
+                4. Output ONLY the translated %s text, nothing else
+                5. No greetings, explanations, "Translation:", quotes, or markdown
+                6. Keep any HTML tags like <i> or <b> exactly as-is
                 """, targetLang, targetLang));
 
         if (isRtl) {
             prompt.append(String.format("""
 
-                    %s RTL RULES (VERY IMPORTANT):
+                    %s RTL RULES:
                     - %s is written RIGHT-TO-LEFT
-                    - Punctuation marks (. , ! ? : ;) must appear at the END of the sentence
-                    - Numbers stay in their original LTR order but integrate naturally
-                    - The comma between clauses goes AFTER the word, not before
+                    - Punctuation (. , ! ? : ;) appears at END of sentence
+                    - Numbers stay LTR but integrate naturally
                     """, targetLang.toUpperCase(), targetLang));
         }
 
@@ -116,14 +120,30 @@ public class TranslationService {
 
     /**
      * Translates a single text string from source to target language.
+     * Translates full text together for context, then enforces line count matching.
      */
     public String translateText(String text) {
         if (text == null || text.isBlank()) {
             return text;
         }
 
+        // Skip hearing impaired annotations if setting is enabled
+        if (appSettings.isSkipHearingImpaired() && isHearingImpairedOnly(text)) {
+            log.debug("Skipping hearing impaired text: {}", text);
+            return text; // Return original text unchanged
+        }
+
+        // Count original lines for structure preservation
+        String[] originalLines = text.split("\n", -1);
+        int originalLineCount = originalLines.length;
+
         try {
             String prompt = buildTranslationPrompt(text);
+
+            // Debug: log what we're sending
+            log.debug("Translation input ({} lines, {} chars): {}",
+                    originalLineCount, text.length(), text.replace("\n", "\\n"));
+            log.debug("Prompt being sent: {}", prompt);
 
             // Build chat client with dynamic system prompt for current language
             ChatClient chatClient = chatClientBuilder
@@ -135,8 +155,16 @@ public class TranslationService {
                     .call()
                     .content();
 
+            // Debug: log what we received
+            log.debug("Translation response ({} chars): {}",
+                    response != null ? response.length() : 0,
+                    response != null ? response.replace("\n", "\\n") : "null");
+
             // Aggressively clean up the response
             String cleaned = cleanTranslationResponse(response, text);
+
+            // Enforce line count matching
+            cleaned = enforceLineCount(cleaned, originalLineCount);
 
             // Apply RTL text processing for Hebrew
             return rtlTextProcessor.processRtlText(cleaned);
@@ -144,6 +172,92 @@ public class TranslationService {
             log.error("Translation failed for text: {}", text, e);
             return text; // Return original text on failure
         }
+    }
+
+    /**
+     * Ensures the translated text has the same number of lines as the original.
+     * If too few lines, splits at natural break points. If too many, joins.
+     */
+    private String enforceLineCount(String text, int targetLineCount) {
+        if (targetLineCount <= 1) {
+            // Single line - just remove any newlines
+            return text.replace("\n", " ").trim();
+        }
+
+        String[] lines = text.split("\n", -1);
+
+        if (lines.length == targetLineCount) {
+            // Already correct
+            return text;
+        }
+
+        if (lines.length > targetLineCount) {
+            // Too many lines - join excess lines with spaces
+            StringBuilder result = new StringBuilder();
+            int linesPerTarget = lines.length / targetLineCount;
+            int remainder = lines.length % targetLineCount;
+            int lineIndex = 0;
+
+            for (int i = 0; i < targetLineCount; i++) {
+                if (i > 0)
+                    result.append("\n");
+                int linesToJoin = linesPerTarget + (i < remainder ? 1 : 0);
+                StringBuilder joined = new StringBuilder();
+                for (int j = 0; j < linesToJoin && lineIndex < lines.length; j++) {
+                    if (j > 0)
+                        joined.append(" ");
+                    joined.append(lines[lineIndex++].trim());
+                }
+                result.append(joined);
+            }
+            return result.toString();
+        }
+
+        // Too few lines - split at natural break points
+        String joined = String.join(" ", lines).trim();
+        int approxCharsPerLine = joined.length() / targetLineCount;
+
+        StringBuilder result = new StringBuilder();
+        int pos = 0;
+
+        for (int i = 0; i < targetLineCount - 1; i++) {
+            if (i > 0)
+                result.append("\n");
+
+            // Find a good break point near the target position
+            int targetPos = Math.min(pos + approxCharsPerLine, joined.length() - 1);
+            int breakPoint = findBreakPoint(joined, targetPos, pos);
+
+            result.append(joined.substring(pos, breakPoint).trim());
+            pos = breakPoint;
+        }
+
+        // Add remaining text as last line
+        if (pos < joined.length()) {
+            if (result.length() > 0)
+                result.append("\n");
+            result.append(joined.substring(pos).trim());
+        }
+
+        return result.toString();
+    }
+
+    /**
+     * Find a natural break point (space) near the target position.
+     */
+    private int findBreakPoint(String text, int target, int minPos) {
+        // Look for a space within +/- 15 characters of target
+        for (int i = target; i < Math.min(target + 15, text.length()); i++) {
+            if (text.charAt(i) == ' ') {
+                return i + 1;
+            }
+        }
+        for (int i = target; i > Math.max(target - 15, minPos); i--) {
+            if (text.charAt(i) == ' ') {
+                return i + 1;
+            }
+        }
+        return Math.min(target + 1, text.length());
     }
 
     /**
@@ -205,7 +319,10 @@ public class TranslationService {
 
     private String buildTranslationPrompt(String text) {
         String targetLanguage = languageConfig.getTargetLanguage();
-        return String.format("%s → %s:\n%s", sourceLanguage, targetLanguage, text);
+        // Use explicit delimiters so the model sees the full input as one unit
+        // Replace internal newlines with a marker to prevent confusion
+        String markedText = text.replace("\n", " || ");
+        return String.format("Translate %s to %s. Text: [[[%s]]]", sourceLanguage, targetLanguage, markedText);
     }
 
     /**
@@ -223,6 +340,18 @@ public class TranslationService {
             cleaned = pattern.matcher(cleaned).replaceFirst("");
         }
 
+        // Remove delimiter brackets if model included them (handle all variations)
+        // Triple brackets first, then double, then single
+        cleaned = cleaned.replace("[[[", "").replace("]]]", "");
+        cleaned = cleaned.replace("[[", "").replace("]]", "");
+        // Only remove single brackets at start/end (not internal ones like [music])
+        if (cleaned.startsWith("[") && !cleaned.contains("]")) {
+            cleaned = cleaned.substring(1);
+        }
+        if (cleaned.endsWith("]") && cleaned.lastIndexOf("[") < cleaned.length() - 10) {
+            cleaned = cleaned.substring(0, cleaned.length() - 1);
+        }
+
         // Remove quotes if the entire response is quoted
         if ((cleaned.startsWith("\"") && cleaned.endsWith("\"")) ||
                 (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
@@ -232,15 +361,8 @@ public class TranslationService {
         // Remove backticks (markdown code blocks)
         cleaned = cleaned.replace("`", "");
 
-        // Preserve original line count - if original had N lines, output should have N
-        // lines
-        int originalLineCount = originalText.split("\n", -1).length;
-        String[] translatedLines = cleaned.split("\n", -1);
-
-        if (translatedLines.length > originalLineCount) {
-            // Model added extra lines - take only what we need
-            cleaned = String.join("\n", java.util.Arrays.copyOf(translatedLines, originalLineCount));
-        }
+        // Convert || markers back to newlines
+        cleaned = cleaned.replace(" || ", "\n").replace("||", "\n");
 
         return cleaned.trim();
     }
@@ -250,5 +372,21 @@ public class TranslationService {
      */
     public void shutdown() {
         executorService.shutdown();
+    }
+
+    /**
+     * Check if text contains only hearing impaired annotations (e.g., [music
+     * playing]).
+     */
+    private boolean isHearingImpairedOnly(String text) {
+        // Check each line - if ALL lines are hearing impaired annotations, skip
+        String[] lines = text.split("\n");
+        for (String line : lines) {
+            String trimmed = line.trim();
+            if (!trimmed.isEmpty() && !HEARING_IMPAIRED_PATTERN.matcher(trimmed).matches()) {
+                return false; // At least one line is not a HI annotation
+            }
+        }
+        return true; // All non-empty lines are HI annotations
     }
 }

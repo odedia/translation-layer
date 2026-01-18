@@ -30,15 +30,17 @@ public class StatusController {
     private final SubtitleService subtitleService;
     private final LanguageConfig languageConfig;
     private final TranslationProgressTracker progressTracker;
+    private final com.example.translationlayer.config.AppSettings appSettings;
 
     @org.springframework.beans.factory.annotation.Value("${translation.cache.directory:${HOME}/.subtitle-cache}")
     private String cacheDirectory;
 
     public StatusController(SubtitleService subtitleService, LanguageConfig languageConfig,
-            TranslationProgressTracker progressTracker) {
+            TranslationProgressTracker progressTracker, com.example.translationlayer.config.AppSettings appSettings) {
         this.subtitleService = subtitleService;
         this.languageConfig = languageConfig;
         this.progressTracker = progressTracker;
+        this.appSettings = appSettings;
     }
 
     @GetMapping("/")
@@ -65,31 +67,53 @@ public class StatusController {
         html.append("<meta name='viewport' content='width=device-width,initial-scale=1'>");
         html.append("<meta http-equiv=\"refresh\" content=\"5\">");
         html.append("<style>");
+        html.append("*{box-sizing:border-box}");
         html.append("body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;");
         html.append(
-                "background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);color:#eee;margin:0;padding:20px;min-height:100vh}");
+                "background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);color:#eee;margin:0;padding:16px;min-height:100vh}");
         html.append(".container{max-width:1000px;margin:0 auto}");
-        html.append("h1{color:#00d9ff;text-align:center;margin-bottom:10px}");
+        html.append("h1{color:#00d9ff;text-align:center;margin-bottom:10px;font-size:1.5em}");
         html.append(
-                ".subtitle{text-align:center;color:#888;margin-bottom:30px;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:10px}");
+                ".subtitle{text-align:center;color:#888;margin-bottom:20px;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px}");
         html.append(
                 ".lang-select{background:rgba(0,217,255,0.2);border:1px solid #00d9ff;color:#00d9ff;padding:8px 12px;border-radius:6px;font-size:16px;cursor:pointer;font-weight:bold}");
         html.append(
-                ".status-card{background:rgba(255,255,255,0.1);border-radius:12px;padding:20px;margin-bottom:20px;backdrop-filter:blur(10px);overflow-x:auto}");
+                ".status-card{background:rgba(255,255,255,0.1);border-radius:12px;padding:16px;margin-bottom:16px;backdrop-filter:blur(10px)}");
         html.append(
-                ".status-card h2{margin-top:0;color:#00d9ff;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px}");
-        html.append("table{width:100%;border-collapse:collapse;min-width:600px}");
-        html.append("th,td{padding:12px 8px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.1)}");
-        html.append("td{word-break:break-word;max-width:200px}");
-        html.append("th{color:#00d9ff;white-space:nowrap}");
+                ".status-card h2{margin-top:0;color:#00d9ff;font-size:1.1em;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px}");
+        // Desktop table styles
+        html.append("table{width:100%;border-collapse:collapse}");
+        html.append("th,td{padding:10px 6px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.1)}");
+        html.append("td{word-break:break-word}");
+        html.append("th{color:#00d9ff;white-space:nowrap;font-size:0.85em}");
+        // Mobile: hide table, show cards
+        html.append("@media(max-width:600px){");
+        html.append(".desktop-table{display:none}");
+        html.append(".mobile-cards{display:block}");
+        html.append("}");
+        html.append("@media(min-width:601px){");
+        html.append(".desktop-table{display:table}");
+        html.append(".mobile-cards{display:none}");
+        html.append("}");
+        // Mobile card styles
+        html.append(
+                ".mobile-card{background:rgba(255,255,255,0.05);border-radius:8px;padding:12px;margin-bottom:12px}");
+        html.append(
+                ".mobile-card-title{font-weight:bold;color:#00d9ff;margin-bottom:8px;word-break:break-word;font-size:0.9em}");
+        html.append(
+                ".mobile-card-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:0.85em}");
+        html.append(".mobile-card-label{color:#888}");
+        html.append(".mobile-card-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}");
+        // Common styles
         html.append(".status-ready{color:#00ff88;font-weight:bold}");
         html.append(
-                ".btn{padding:8px 16px;border-radius:6px;text-decoration:none;font-weight:bold;border:none;cursor:pointer;font-size:14px}");
+                ".btn{padding:8px 14px;border-radius:6px;text-decoration:none;font-weight:bold;border:none;cursor:pointer;font-size:13px}");
         html.append(".download-btn{background:#00d9ff;color:#1a1a2e}");
-        html.append(".delete-btn{background:#ff4757;color:white;margin-left:8px}");
+        html.append(".delete-btn{background:#ff4757;color:white}");
         html.append(".clear-all-btn{background:#ff4757;color:white;font-size:12px;padding:6px 12px}");
-        html.append(".empty{text-align:center;color:#888;padding:40px}");
-        html.append(".progress-bar{background:#333;border-radius:4px;height:20px;width:200px;display:inline-block}");
+        html.append(".empty{text-align:center;color:#888;padding:30px}");
+        html.append(
+                ".progress-bar{background:#333;border-radius:4px;height:20px;width:100%;max-width:200px;display:inline-block}");
         html.append(".progress-fill{background:#00d9ff;height:20px;border-radius:4px}");
         html.append(
                 ".rtl-badge{background:#ff9f43;color:#1a1a2e;font-size:10px;padding:2px 6px;border-radius:4px;margin-left:6px}");
@@ -103,6 +127,20 @@ public class StatusController {
                 "function clearAllCache(){if(confirm('Delete ALL cached subtitles?')){fetch('/cache',{method:'DELETE'}).then(()=>location.reload())}}");
         html.append("</script></head><body><div class=\"container\">");
         html.append("<h1>🎬 Translation Layer</h1>");
+        html.append(
+                "<p style='text-align:center;margin-bottom:20px'><a href='/browse' style='color:#00d9ff;text-decoration:none'>📂 File Browser</a> | <a href='/settings' style='color:#00d9ff;text-decoration:none'>⚙️ Settings</a></p>");
+
+        // First-run setup banner
+        if (appSettings.isFirstRun()) {
+            html.append(
+                    "<div style='background:linear-gradient(135deg,#ff6b6b,#ee5a5a);color:#fff;padding:16px;border-radius:12px;margin-bottom:20px;text-align:center'>");
+            html.append("<p style='margin:0 0 12px 0;font-size:1.1em'>⚠️ <strong>Setup Required</strong></p>");
+            html.append(
+                    "<p style='margin:0 0 12px 0'>Please configure your settings before using the application.</p>");
+            html.append(
+                    "<a href='/settings' style='display:inline-block;background:#fff;color:#ee5a5a;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:bold'>Open Settings</a>");
+            html.append("</div>");
+        }
 
         // Language selector
         html.append(
@@ -123,18 +161,36 @@ public class StatusController {
         Map<String, TranslationProgress> active = progressTracker.getActiveTranslations();
         if (!active.isEmpty()) {
             html.append("<div class=\"status-card\"><h2>⏳ Translations In Progress</h2>");
-            html.append("<table><tr><th>File ID</th><th>File Name</th><th>Progress</th><th>Elapsed</th></tr>");
+            // Desktop table
+            html.append("<table class='desktop-table'><tr><th>File</th><th>Progress</th><th>Elapsed</th></tr>");
             for (TranslationProgress p : active.values()) {
                 long sec = Duration.between(p.startTime(), Instant.now()).toSeconds();
                 String elapsed = sec < 60 ? sec + "s" : (sec / 60) + "m " + (sec % 60) + "s";
                 int pct = p.progressPercent();
-                html.append("<tr><td>").append(p.fileId()).append("</td>");
-                html.append("<td>").append(p.fileName()).append("</td>");
+                html.append("<tr><td>").append(p.fileName()).append("</td>");
                 html.append("<td><div class='progress-bar'><div class='progress-fill' style='width:").append(pct)
                         .append("%'></div></div> ").append(pct).append("%</td>");
                 html.append("<td>").append(elapsed).append("</td></tr>");
             }
-            html.append("</table></div>");
+            html.append("</table>");
+            // Mobile cards
+            html.append("<div class='mobile-cards'>");
+            for (TranslationProgress p : active.values()) {
+                long sec = Duration.between(p.startTime(), Instant.now()).toSeconds();
+                String elapsed = sec < 60 ? sec + "s" : (sec / 60) + "m " + (sec % 60) + "s";
+                int pct = p.progressPercent();
+                html.append("<div class='mobile-card'>");
+                html.append("<div class='mobile-card-title'>").append(p.fileName()).append("</div>");
+                html.append("<div class='mobile-card-row'><span class='mobile-card-label'>Progress</span><span>")
+                        .append(pct).append("%</span></div>");
+                html.append("<div class='progress-bar' style='width:100%'><div class='progress-fill' style='width:")
+                        .append(pct).append("%'></div></div>");
+                html.append("<div class='mobile-card-row'><span class='mobile-card-label'>Elapsed</span><span>")
+                        .append(elapsed).append("</span></div>");
+                html.append("</div>");
+            }
+            html.append("</div>");
+            html.append("</div>");
         }
 
         // Cached translations section
@@ -193,32 +249,62 @@ public class StatusController {
         if (cached.isEmpty()) {
             html.append("<p class='empty'>No translations cached yet.</p>");
         } else {
-            html.append(
-                    "<table><tr><th>File ID</th><th>File Name</th><th>Status</th><th>Size</th><th>Updated</th><th>Actions</th></tr>");
-
             DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.systemDefault());
+            DateTimeFormatter fmtMobile = DateTimeFormatter.ofPattern("MM-dd HH:mm").withZone(ZoneId.systemDefault());
             cached.sort((a, b) -> b.modified.compareTo(a.modified));
 
+            // Desktop table
+            html.append(
+                    "<table class='desktop-table'><tr><th>File Name</th><th>Status</th><th>Size</th><th>Updated</th><th>Actions</th></tr>");
             for (CachedSubtitle sub : cached) {
                 String status = sub.translated ? "<span class='status-ready'>✓ Ready</span>"
                         : "<span style='color:#ffaa00'>⏳ In Progress</span>";
                 String size = sub.translated ? formatSize(sub.size) : "-";
                 String time = fmt.format(sub.modified);
-                String name = sub.fileName != null ? sub.fileName : "-";
+                String name = sub.fileName != null ? sub.fileName : "ID: " + sub.fileId;
                 String download = sub.translated
                         ? "<a href='/api/v1/download/" + sub.fileId
                                 + "/subtitle.srt' class='btn download-btn'>Download</a>"
                         : "";
                 String del = "<button class='btn delete-btn' onclick='deleteCache(\"" + sub.fileId + "\")'>🗑</button>";
 
-                html.append("<tr><td>").append(sub.fileId).append("</td>");
-                html.append("<td>").append(name).append("</td>");
+                html.append("<tr><td>").append(name).append("</td>");
                 html.append("<td>").append(status).append("</td>");
                 html.append("<td>").append(size).append("</td>");
                 html.append("<td>").append(time).append("</td>");
                 html.append("<td>").append(download).append(del).append("</td></tr>");
             }
             html.append("</table>");
+
+            // Mobile cards
+            html.append("<div class='mobile-cards'>");
+            for (CachedSubtitle sub : cached) {
+                String name = sub.fileName != null ? sub.fileName : "ID: " + sub.fileId;
+                String size = sub.translated ? formatSize(sub.size) : "-";
+                String time = fmtMobile.format(sub.modified);
+                String download = sub.translated
+                        ? "<a href='/api/v1/download/" + sub.fileId
+                                + "/subtitle.srt' class='btn download-btn'>Download</a>"
+                        : "";
+                String del = "<button class='btn delete-btn' onclick='deleteCache(\"" + sub.fileId + "\")'>🗑</button>";
+
+                html.append("<div class='mobile-card'>");
+                html.append("<div class='mobile-card-title'>").append(name).append("</div>");
+                html.append("<div class='mobile-card-row'><span class='mobile-card-label'>Status</span>");
+                if (sub.translated) {
+                    html.append("<span class='status-ready'>✓ Ready</span>");
+                } else {
+                    html.append("<span style='color:#ffaa00'>⏳ In Progress</span>");
+                }
+                html.append("</div>");
+                html.append("<div class='mobile-card-row'><span class='mobile-card-label'>Size</span><span>")
+                        .append(size).append("</span></div>");
+                html.append("<div class='mobile-card-row'><span class='mobile-card-label'>Updated</span><span>")
+                        .append(time).append("</span></div>");
+                html.append("<div class='mobile-card-actions'>").append(download).append(del).append("</div>");
+                html.append("</div>");
+            }
+            html.append("</div>");
         }
 
         html.append("</div><p style='text-align:center;color:#666;font-size:12px'>Auto-refreshes every 5 seconds</p>");

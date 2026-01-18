@@ -30,3 +30,7 @@ subtitle-cache/
 
 # Kodi addon build artifacts
 *.zip
+*.mkv
+*.mp4
+*.avi
+language-config.json

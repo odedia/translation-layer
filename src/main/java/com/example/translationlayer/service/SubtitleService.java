@@ -176,6 +176,37 @@ public class SubtitleService {
         return cacheEnabled && Files.exists(translatedPath);
     }
 
+    /**
+     * Translate raw subtitle content to the specified target language.
+     * Used for translating existing subtitles (e.g., from NAS).
+     */
+    public String translateSubtitleContent(String subtitleContent, String targetLanguage) throws IOException {
+        log.info("Translating subtitle content to {}", targetLanguage);
+
+        // Parse the subtitle content
+        List<SubtitleEntry> entries = parser.parse(subtitleContent);
+        log.info("Parsed {} subtitle entries for translation", entries.size());
+
+        if (entries.isEmpty()) {
+            throw new IOException("No subtitle entries found in content");
+        }
+
+        // Register with progress tracker using a generated ID
+        String progressId = "local_" + System.currentTimeMillis();
+        progressTracker.startTranslation(progressId, "Local subtitle", entries.size());
+
+        try {
+            // Translate entries with progress callback
+            List<SubtitleEntry> translatedEntries = translationService.translateSubtitles(entries,
+                    completed -> progressTracker.updateProgress(progressId, completed));
+
+            // Generate output as SRT
+            return parser.generateSrt(translatedEntries);
+        } finally {
+            progressTracker.completeTranslation(progressId);
+        }
+    }
+
     // ==================== LOCAL MODE METHODS ====================
 
     /**
