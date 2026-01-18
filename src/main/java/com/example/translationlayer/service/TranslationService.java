@@ -379,6 +379,11 @@ public class TranslationService {
             String translatedText = translations.get(i);
 
             if (translatedText != null && !translatedText.isBlank()) {
+                // Enforce line count to match original structure
+                int originalLineCount = entry.text().split("\n", -1).length;
+                if (originalLineCount > 1) {
+                    translatedText = enforceLineCount(translatedText, originalLineCount);
+                }
                 // Apply RTL processing
                 translatedText = rtlTextProcessor.processRtlText(translatedText);
                 result.add(entry.withTranslatedText(translatedText));
