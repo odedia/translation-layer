@@ -1,9 +1,12 @@
 package com.example.translationlayer.controller;
 
+import com.example.translationlayer.config.AppSettings;
 import com.example.translationlayer.config.LanguageConfig;
 import com.example.translationlayer.config.SmbConfig;
 import com.example.translationlayer.model.SubtitleSearchResponse;
 import com.example.translationlayer.service.FfmpegService;
+import com.example.translationlayer.service.FileSystemService;
+import com.example.translationlayer.service.LocalFileService;
 import com.example.translationlayer.service.NasDiscoveryService;
 import com.example.translationlayer.service.OpenSubtitlesClient;
 import com.example.translationlayer.service.SmbService;
@@ -33,6 +36,8 @@ public class FileBrowserController {
 
         private final SmbConfig smbConfig;
         private final SmbService smbService;
+        private final LocalFileService localFileService;
+        private final AppSettings appSettings;
         private final LanguageConfig languageConfig;
         private final OpenSubtitlesClient openSubtitlesClient;
         private final SubtitleService subtitleService;
@@ -42,12 +47,15 @@ public class FileBrowserController {
         private final BatchTranslationService batchTranslationService;
 
         public FileBrowserController(SmbConfig smbConfig, SmbService smbService,
+                        LocalFileService localFileService, AppSettings appSettings,
                         LanguageConfig languageConfig, OpenSubtitlesClient openSubtitlesClient,
                         SubtitleService subtitleService, NasDiscoveryService nasDiscoveryService,
                         FfmpegService ffmpegService, TranslationProgressTracker progressTracker,
                         BatchTranslationService batchTranslationService) {
                 this.smbConfig = smbConfig;
                 this.smbService = smbService;
+                this.localFileService = localFileService;
+                this.appSettings = appSettings;
                 this.languageConfig = languageConfig;
                 this.openSubtitlesClient = openSubtitlesClient;
                 this.subtitleService = subtitleService;
@@ -57,13 +65,27 @@ public class FileBrowserController {
                 this.batchTranslationService = batchTranslationService;
         }
 
+        /**
+         * Get the appropriate file service based on current browse mode.
+         */
+        private FileSystemService getFileService() {
+                return appSettings.isLocalMode() ? localFileService : smbService;
+        }
+
+        /**
+         * Check if current file service is configured.
+         */
+        private boolean isFileServiceConfigured() {
+                return appSettings.isLocalMode() ? localFileService.isConfigured() : smbConfig.isConfigured();
+        }
+
         // ==================== REST API Endpoints ====================
 
         @GetMapping("/api/browse")
         @ResponseBody
         public ResponseEntity<?> listDirectory(@RequestParam(defaultValue = "") String path) {
                 try {
-                        List<SmbService.FileEntry> entries = smbService.listDirectory(path);
+                        List<SmbService.FileEntry> entries = getFileService().listDirectory(path);
                         return ResponseEntity.ok(entries);
                 } catch (IOException e) {
                         return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
@@ -130,8 +152,11 @@ public class FileBrowserController {
 
         @GetMapping("/api/browse/settings")
         @ResponseBody
-        public SmbConfig.SmbSettings getSettings() {
-                return smbConfig.getSettings();
+        public Map<String, Object> getSettings() {
+                return Map.of(
+                                "browseMode", appSettings.getBrowseMode(),
+                                "localRootPath", appSettings.getLocalRootPath(),
+                                "smb", smbConfig.getSettings());
         }
 
         @PostMapping("/api/browse/settings")
@@ -146,10 +171,50 @@ public class FileBrowserController {
                 return ResponseEntity.ok(Map.of("success", true));
         }
 
+        @PostMapping("/api/browse/mode")
+        @ResponseBody
+        public ResponseEntity<?> updateBrowseMode(@RequestBody Map<String, String> request) {
+                String mode = request.get("browseMode");
+                String localPath = request.get("localRootPath");
+
+                if (mode != null) {
+                        appSettings.setBrowseMode(mode);
+                }
+                if (localPath != null) {
+                        appSettings.setLocalRootPath(localPath);
+                }
+                appSettings.saveSettings();
+
+                return ResponseEntity.ok(Map.of("success", true, "browseMode", appSettings.getBrowseMode()));
+        }
+
         @PostMapping("/api/browse/test")
         @ResponseBody
-        public ResponseEntity<?> testConnection() {
-                String error = smbService.testConnection();
+        public ResponseEntity<?> testConnection(@RequestBody(required = false) Map<String, String> request) {
+                String error;
+
+                // Check if testing a local path that hasn't been saved yet
+                if (request != null && request.containsKey("localPath")) {
+                        String localPath = request.get("localPath");
+                        if (localPath == null || localPath.isBlank()) {
+                                error = "Local root path not provided";
+                        } else {
+                                java.nio.file.Path path = java.nio.file.Path.of(localPath);
+                                if (!java.nio.file.Files.exists(path)) {
+                                        error = "Path does not exist: " + localPath;
+                                } else if (!java.nio.file.Files.isDirectory(path)) {
+                                        error = "Path is not a directory: " + localPath;
+                                } else if (!java.nio.file.Files.isReadable(path)) {
+                                        error = "Path is not readable: " + localPath;
+                                } else {
+                                        error = null; // Success
+                                }
+                        }
+                } else {
+                        // Use the current file service's saved settings
+                        error = getFileService().testConnection();
+                }
+
                 if (error == null) {
                         return ResponseEntity.ok(Map.of("success", true));
                 } else {
@@ -415,7 +480,7 @@ public class FileBrowserController {
 
         private String generateBrowseHtml() {
                 String currentLang = languageConfig.getTargetLanguage();
-                boolean isConfigured = smbConfig.isConfigured();
+                boolean isConfigured = isFileServiceConfigured();
 
                 StringBuilder html = new StringBuilder();
                 html.append("<!DOCTYPE html><html><head>");
@@ -504,15 +569,16 @@ public class FileBrowserController {
 
                 if (!isConfigured) {
                         // Show settings form
-                        html.append("<div class='card'><h2>⚙️ NAS Settings</h2>");
+                        html.append("<div class='card'><h2>📂 File Source</h2>");
                         html.append("<div id='settings-form'></div></div>");
                 } else {
                         // Show file browser
                         html.append("<div class='card'>");
                         html.append("<div class='lang-bar'>");
                         html.append("<span>Target: <strong>").append(currentLang).append("</strong></span>");
-                        html.append(
-                                        "<a href='#' onclick='showSettings();return false' style='color:#00d9ff;font-size:0.85em'>⚙️ Settings</a>");
+                        String sourceLabel = appSettings.isLocalMode() ? "📂 Source: Local" : "📂 Source: NAS";
+                        html.append("<a href='#' onclick='showSettings();return false' style='color:#00d9ff;font-size:0.85em'>")
+                                        .append(sourceLabel).append("</a>");
                         html.append("</div>");
                         html.append(
                                         "<div id='browser'><div class='status-msg'><span class='spinner'></span> Loading...</div></div>");
@@ -538,30 +604,57 @@ public class FileBrowserController {
                 // Show settings form
                 html.append("function showSettings(){");
                 html.append(
-                                "document.getElementById('app').innerHTML='<div class=\"card\"><h2>⚙️ NAS Settings</h2><div id=\"settings-form\"></div></div>';");
+                                "document.getElementById('app').innerHTML='<div class=\"card\"><h2>\ud83d\udcc2 File Source</h2><div id=\"settings-form\"></div></div>';");
                 html.append("showSettingsForm();");
                 html.append("}");
 
                 html.append("function showSettingsForm(){");
-                html.append("fetch('/api/browse/settings').then(r=>r.json()).then(s=>{");
+                html.append("fetch('/api/browse/settings').then(r=>r.json()).then(settings=>{");
+                html.append("let s = settings.smb || {};");
+                html.append("let mode = settings.browseMode || 'smb';");
+                html.append("let localPath = settings.localRootPath || '';");
                 html.append("document.getElementById('settings-form').innerHTML=`");
-                html.append(
-                                "<button class='btn btn-secondary' onclick='discoverNas()' style='margin-bottom:16px'>🔍 Discover NAS on Network</button>");
+                // Mode toggle tabs
+                html.append("<div style='display:flex;gap:0;margin-bottom:16px'>");
+                html.append("<button id='tab-local' class='btn ${mode==\"local\"?\"btn-primary\":\"btn-secondary\"}' style='border-radius:6px 0 0 6px' onclick='setMode(\"local\")'>📁 Local</button>");
+                html.append("<button id='tab-smb' class='btn ${mode==\"smb\"?\"btn-primary\":\"btn-secondary\"}' style='border-radius:0 6px 6px 0' onclick='setMode(\"smb\")'>🌐 NAS</button>");
+                html.append("</div>");
+                // Local mode settings
+                html.append("<div id='local-settings' style='display:${mode==\"local\"?\"block\":\"none\"}'>");
+                html.append("<div class='form-group'><label>Root Path</label><input type='text' id='local-path' value='${localPath}' placeholder='/Volumes/Media or D:\\\\Movies'></div>");
+                html.append("<button class='btn btn-secondary' onclick='testConnection()'>Test Access</button>");
+                html.append("<button class='btn btn-primary' onclick='saveLocalSettings()'>Save & Browse</button>");
+                html.append("</div>");
+                // NAS mode settings
+                html.append("<div id='smb-settings' style='display:${mode==\"smb\"?\"block\":\"none\"}'>");
+                html.append("<button class='btn btn-secondary' onclick='discoverNas()' style='margin-bottom:16px'>🔍 Discover NAS on Network</button>");
                 html.append("<div id='discover-results'></div>");
-                html.append(
-                                "<div class='form-group'><label>NAS Host / IP</label><input type='text' id='smb-host' value='${s.host||''}' placeholder='192.168.1.100 or nas.local'></div>");
-                html.append(
-                                "<div class='form-group'><label>Share Name</label><input type='text' id='smb-share' value='${s.share||''}' placeholder='Media'></div>");
-                html.append(
-                                "<div class='form-group'><label>Username (optional)</label><input type='text' id='smb-user' value='${s.username||''}' autocapitalize='off'></div>");
-                html.append(
-                                "<div class='form-group'><label>Password (optional)</label><input type='password' id='smb-pass' placeholder='••••••••'></div>");
-                html.append(
-                                "<div class='form-group'><label>Domain (optional)</label><input type='text' id='smb-domain' value='${s.domain||''}' autocapitalize='off'></div>");
+                html.append("<div class='form-group'><label>NAS Host / IP</label><input type='text' id='smb-host' value='${s.host||''}' placeholder='192.168.1.100 or nas.local'></div>");
+                html.append("<div class='form-group'><label>Share Name</label><input type='text' id='smb-share' value='${s.share||''}' placeholder='Media'></div>");
+                html.append("<div class='form-group'><label>Username (optional)</label><input type='text' id='smb-user' value='${s.username||''}' autocapitalize='off'></div>");
+                html.append("<div class='form-group'><label>Password (optional)</label><input type='password' id='smb-pass' placeholder='••••••••'></div>");
+                html.append("<div class='form-group'><label>Domain (optional)</label><input type='text' id='smb-domain' value='${s.domain||''}' autocapitalize='off'></div>");
                 html.append("<button class='btn btn-secondary' onclick='testConnection()'>Test Connection</button>");
                 html.append("<button class='btn btn-primary' onclick='saveSettings()'>Save Settings</button>");
+                html.append("</div>");
                 html.append("<div id='settings-status'></div>");
                 html.append("`;});");
+                html.append("}");
+
+                // Set mode function
+                html.append("function setMode(mode){");
+                html.append("document.getElementById('tab-local').className='btn '+(mode=='local'?'btn-primary':'btn-secondary');");
+                html.append("document.getElementById('tab-smb').className='btn '+(mode=='smb'?'btn-primary':'btn-secondary');");
+                html.append("document.getElementById('local-settings').style.display=mode=='local'?'block':'none';");
+                html.append("document.getElementById('smb-settings').style.display=mode=='smb'?'block':'none';");
+                html.append("fetch('/api/browse/mode',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({browseMode:mode})});");
+                html.append("}");
+
+                // Save local settings
+                html.append("function saveLocalSettings(){");
+                html.append("let path=document.getElementById('local-path').value;");
+                html.append("fetch('/api/browse/mode',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({browseMode:'local',localRootPath:path})})");
+                html.append(".then(r=>r.json()).then(r=>{if(r.success){location.reload();}else{document.getElementById('settings-status').innerHTML='<div class=\"error-msg\">'+r.error+'</div>';}});");
                 html.append("}");
 
                 // Discover NAS devices
@@ -589,15 +682,25 @@ public class FileBrowserController {
 
                 // Test connection
                 html.append("function testConnection(){");
-                html.append(
-                                "document.getElementById('settings-status').innerHTML='<div class=\"status-msg\"><span class=\"spinner\"></span> Testing...</div>';");
+                html.append("document.getElementById('settings-status').innerHTML='<div class=\"status-msg\"><span class=\"spinner\"></span> Testing...</div>';");
+                // Check if we're in local mode (local-settings is visible)
+                html.append("let localSettings=document.getElementById('local-settings');");
+                html.append("let isLocalMode=localSettings && localSettings.style.display!='none';");
+                html.append("if(isLocalMode){");
+                // Local mode: send the path from input for testing
+                html.append("let path=document.getElementById('local-path').value;");
+                html.append("fetch('/api/browse/test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({localPath:path})}).then(r=>r.json()).then(r=>{");
+                html.append("if(r.success){document.getElementById('settings-status').innerHTML='<div class=\"success-msg\">✓ Path accessible!</div>';}");
+                html.append("else{document.getElementById('settings-status').innerHTML='<div class=\"error-msg\">✗ '+r.error+'</div>';}");
+                html.append("});");
+                html.append("}else{");
+                // NAS mode: save settings first, then test
                 html.append("saveSettingsQuiet().then(()=>{");
-                html.append("fetch('/api/browse/test',{method:'POST'}).then(r=>r.json()).then(r=>{");
-                html.append(
-                                "if(r.success){document.getElementById('settings-status').innerHTML='<div class=\"success-msg\">✓ Connection successful!</div>';}");
-                html.append(
-                                "else{document.getElementById('settings-status').innerHTML='<div class=\"error-msg\">✗ '+r.error+'</div>';}");
+                html.append("fetch('/api/browse/test',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).then(r=>r.json()).then(r=>{");
+                html.append("if(r.success){document.getElementById('settings-status').innerHTML='<div class=\"success-msg\">✓ Connection successful!</div>';}");
+                html.append("else{document.getElementById('settings-status').innerHTML='<div class=\"error-msg\">✗ '+r.error+'</div>';}");
                 html.append("});});");
+                html.append("}");
                 html.append("}");
 
                 // Save settings (quiet, for test)

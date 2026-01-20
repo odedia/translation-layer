@@ -43,6 +43,10 @@ public class AppSettings {
     private boolean skipHearingImpaired = false;
     private int translationBatchSize = 20; // Number of subtitle cues to translate at once
 
+    // Browse Mode Settings
+    private String browseMode = "smb"; // "smb" or "local"
+    private String localRootPath = ""; // Root path for local browsing
+
     // SMB Settings (migrated from SmbConfig)
     private String smbHost = "";
     private String smbShare = "";
@@ -81,9 +85,11 @@ public class AppSettings {
             smbUsername = getString(data, "smbUsername", "");
             smbPassword = getString(data, "smbPassword", "");
             smbDomain = getString(data, "smbDomain", "");
+            browseMode = getString(data, "browseMode", "smb");
+            localRootPath = getString(data, "localRootPath", "");
 
-            log.info("Loaded settings: provider={}, model={}", modelProvider,
-                    "openai".equals(modelProvider) ? openAiModel : ollamaModel);
+            log.info("Loaded settings: provider={}, model={}, browseMode={}", modelProvider,
+                    "openai".equals(modelProvider) ? openAiModel : ollamaModel, browseMode);
         } catch (IOException e) {
             log.error("Failed to load settings", e);
         }
@@ -110,6 +116,8 @@ public class AppSettings {
             data.put("smbUsername", smbUsername);
             data.put("smbPassword", smbPassword);
             data.put("smbDomain", smbDomain);
+            data.put("browseMode", browseMode);
+            data.put("localRootPath", localRootPath);
 
             mapper.writerWithDefaultPrettyPrinter().writeValue(CONFIG_FILE.toFile(), data);
             log.info("Saved settings to {}", CONFIG_FILE);
@@ -266,6 +274,26 @@ public class AppSettings {
 
     public void setSmbDomain(String domain) {
         this.smbDomain = domain;
+    }
+
+    public String getBrowseMode() {
+        return browseMode;
+    }
+
+    public void setBrowseMode(String mode) {
+        this.browseMode = mode;
+    }
+
+    public String getLocalRootPath() {
+        return localRootPath;
+    }
+
+    public void setLocalRootPath(String path) {
+        this.localRootPath = path;
+    }
+
+    public boolean isLocalMode() {
+        return "local".equals(browseMode);
     }
 
     public boolean isOpenAiConfigured() {

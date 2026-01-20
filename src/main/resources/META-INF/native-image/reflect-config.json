@@ -338,5 +338,10 @@
     "allDeclaredConstructors": true,
     "allDeclaredMethods": true,
     "allDeclaredFields": true
+  },
+  {
+    "name": "com.example.translationlayer.service.LocalFileService",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true
   }
 ]

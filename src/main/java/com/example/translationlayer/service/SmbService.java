@@ -22,12 +22,13 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.nio.file.Path;
 
 /**
  * Service for browsing and writing files to SMB/NAS shares.
  */
 @Service
-public class SmbService {
+public class SmbService implements FileSystemService {
 
     private static final Logger log = LoggerFactory.getLogger(SmbService.class);
 
@@ -76,11 +77,17 @@ public class SmbService {
         this.smbConfig = smbConfig;
     }
 
+    @Override
+    public boolean isConfigured() {
+        return smbConfig.isConfigured();
+    }
+
     /**
      * Test the SMB connection with current settings.
      * 
      * @return null if successful, error message if failed
      */
+    @Override
     public String testConnection() {
         if (!smbConfig.isConfigured()) {
             return "SMB not configured. Please set host and share name.";
@@ -223,7 +230,8 @@ public class SmbService {
      * @param srtContent   The subtitle content
      * @return The path of the created subtitle file
      */
-    public String writeSubtitleDirect(String subtitlePath, String srtContent) throws IOException {
+    @Override
+    public void writeSubtitleDirect(String subtitlePath, String srtContent) throws IOException {
         if (!smbConfig.isConfigured()) {
             throw new IOException("SMB not configured");
         }
@@ -251,7 +259,6 @@ public class SmbService {
             }
 
             log.info("Wrote subtitle directly to: {}", subtitlePath);
-            return subtitlePath;
 
         } catch (Exception e) {
             log.error("Failed to write subtitle: {}", subtitlePath, e);

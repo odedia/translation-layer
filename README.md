@@ -4,7 +4,12 @@
 
 A subtitle translation service that **fetches English subtitles from OpenSubtitles.org and translates them to any popular language** using AI models running locally via **Ollama** or cloud-based via **OpenAI**.
 
-## 🆕 What's New in v1.0.0 (January 2026)
+## 🆕 What's New in v1.0.4 (January 2026)
+
+### 📂 Local File Browsing
+- **Browse local disk** - no NAS required! Point to any folder on your machine
+- **Switch sources** - toggle between Local and NAS with the "📂 Source: Local/NAS" link
+- **Security** - path traversal protection keeps browsing within your configured root
 
 ### 🚀 Native Compilation Support
 - **GraalVM Native Image** - compile to native executable for instant startup (~100ms) and reduced memory
@@ -12,10 +17,10 @@ A subtitle translation service that **fetches English subtitles from OpenSubtitl
 
 ### Manual Workflow (Works with Any Player!)
 Translate subtitles for **any video player** (Infuse, VLC, Plex, etc.) - not just Kodi/Stremio:
-- **NAS File Browser** - traverse your entire NAS via SMB
+- **File Browser** - browse local folders or NAS via SMB
 - **Zeroconf/Bonjour discovery** - automatically finds NAS devices on your network
 - Browse folders → select videos → extract & translate embedded subtitles
-- Translated files saved directly next to videos on NAS
+- Translated files saved directly next to videos
 
 ### Batch Folder Translation
 Translate all videos with English embedded subtitles in a folder with one click:
