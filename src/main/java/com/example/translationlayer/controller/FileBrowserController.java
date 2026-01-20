@@ -626,7 +626,11 @@ public class FileBrowserController {
                 html.append("}");
 
                 // Render directory
-                html.append("function renderDirectory(entries){");
+                html.append("function renderDirectory(data){");
+                // Handle error response (when API returns {error: ...} instead of array)
+                html.append("if(data && data.error){document.getElementById('browser').innerHTML='<div class=\"error-msg\">'+data.error+'</div>';return;}");
+                // Ensure entries is an array
+                html.append("let entries=Array.isArray(data)?data:[];");
                 html.append("let html='';");
                 // Breadcrumb
                 html.append(

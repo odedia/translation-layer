@@ -34,7 +34,6 @@ translation:
   cache:
     enabled: true
     directory: ${HOME}/.subtitle-cache
-  subtitle-directory: ./subtitles
 
 logging:
   level:

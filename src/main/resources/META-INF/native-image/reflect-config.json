@@ -1,0 +1,342 @@
+[
+  {
+    "name": "com.hierynomus.smbj.SMBClient",
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allDeclaredMethods": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "com.hierynomus.smbj.SmbConfig",
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allDeclaredMethods": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "com.hierynomus.smbj.SmbConfig$Builder",
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allDeclaredMethods": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "com.hierynomus.smbj.auth.AuthenticationContext",
+    "allDeclaredConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "com.hierynomus.smbj.auth.NtlmAuthenticator",
+    "allDeclaredConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "com.hierynomus.smbj.auth.NtlmAuthenticator$Factory",
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "com.hierynomus.smbj.auth.SpnegoAuthenticator",
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "com.hierynomus.smbj.auth.SpnegoAuthenticator$Factory",
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "com.hierynomus.smbj.auth.GSSAuthenticationContext",
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "com.hierynomus.smbj.connection.Connection",
+    "allDeclaredMethods": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "com.hierynomus.smbj.session.Session",
+    "allDeclaredMethods": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "com.hierynomus.smbj.share.DiskShare",
+    "allDeclaredMethods": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "com.hierynomus.mssmb2.SMB2Dialect",
+    "allDeclaredFields": true,
+    "allPublicFields": true
+  },
+  {
+    "name": "javax.jmdns.JmDNS",
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allDeclaredMethods": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "javax.jmdns.ServiceInfo",
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allDeclaredMethods": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "javax.jmdns.ServiceListener",
+    "allDeclaredMethods": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "javax.jmdns.impl.JmDNSImpl",
+    "allDeclaredConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "org.bouncycastle.jce.provider.BouncyCastleProvider",
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true
+  },
+  {
+    "name": "java.net.NetworkInterface",
+    "allDeclaredMethods": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "java.net.InetAddress",
+    "allDeclaredMethods": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "net.engio.mbassy.dispatch.ReflectiveHandlerInvocation",
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allDeclaredMethods": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "net.engio.mbassy.subscription.SubscriptionContext",
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allDeclaredMethods": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "net.engio.mbassy.subscription.SubscriptionFactory",
+    "allDeclaredConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "net.engio.mbassy.subscription.SubscriptionManager",
+    "allDeclaredConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "net.engio.mbassy.bus.AbstractPubSubSupport",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "com.hierynomus.smbj.event.SMBEventBus",
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allDeclaredMethods": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "com.hierynomus.smbj.event.handler.LoggingNotificationHandler",
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allDeclaredMethods": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "com.example.translationlayer.service.SmbService$FileEntry",
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allDeclaredMethods": true,
+    "allPublicMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.example.translationlayer.service.SubtitleService$SubtitleInfo",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.example.translationlayer.service.FfmpegService$SubtitleTrack",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.example.translationlayer.service.TranslationProgressTracker$TranslationProgress",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.example.translationlayer.service.OpenSubtitlesClient$DownloadResult",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.example.translationlayer.service.BatchTranslationService$VideoToTranslate",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.example.translationlayer.service.BatchTranslationService$BatchProgress",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.example.translationlayer.service.NasDiscoveryService$DiscoveredNas",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.example.translationlayer.config.SmbConfig$SmbSettings",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.example.translationlayer.controller.FileBrowserController$TranslateRequest",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.example.translationlayer.controller.FileBrowserController$TranslateLocalRequest",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.example.translationlayer.controller.FileBrowserController$TranslateEmbeddedRequest",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.example.translationlayer.controller.FileBrowserController$SmbSettingsRequest",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.example.translationlayer.model.SubtitleSearchResponse",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.example.translationlayer.model.SubtitleSearchResponse$SubtitleData",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.example.translationlayer.model.SubtitleSearchResponse$SubtitleAttributes",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.example.translationlayer.model.SubtitleSearchResponse$Uploader",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.example.translationlayer.model.SubtitleSearchResponse$FeatureDetails",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.example.translationlayer.model.SubtitleSearchResponse$RelatedLink",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.example.translationlayer.model.SubtitleSearchResponse$SubtitleFile",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.example.translationlayer.model.SubtitleEntry",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.example.translationlayer.model.DownloadResponse",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.example.translationlayer.model.DownloadRequest",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.example.translationlayer.model.LoginRequest",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.example.translationlayer.model.LoginResponse",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.example.translationlayer.model.LoginResponse$UserInfo",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.example.translationlayer.model.LanguagesResponse",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.example.translationlayer.model.LanguagesResponse$LanguageData",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.example.translationlayer.model.UserInfoResponse",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.example.translationlayer.model.UserInfoResponse$UserData",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  }
+]

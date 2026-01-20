@@ -34,13 +34,10 @@ public class SubtitleService {
     private final OpenSubtitlesClient openSubtitlesClient;
     private final TranslationProgressTracker progressTracker;
 
-    @Value("${translation.subtitle-directory:./subtitles}")
-    private String subtitleDirectory;
-
     @Value("${translation.cache.enabled:true}")
     private boolean cacheEnabled;
 
-    @Value("${translation.cache.directory:./subtitle-cache}")
+    @Value("${translation.cache.directory:${HOME}/.subtitle-cache}")
     private String cacheDirectory;
 
     // In-memory index of available subtitles
@@ -57,8 +54,7 @@ public class SubtitleService {
 
     @PostConstruct
     public void init() throws IOException {
-        // Create directories if they don't exist
-        Files.createDirectories(Path.of(subtitleDirectory));
+        // Create cache directory if it doesn't exist
         Files.createDirectories(Path.of(cacheDirectory));
 
         // Index existing subtitle files
@@ -210,10 +206,10 @@ public class SubtitleService {
     // ==================== LOCAL MODE METHODS ====================
 
     /**
-     * Indexes existing subtitle files in the subtitle directory.
+     * Indexes existing subtitle files in the cache directory.
      */
     private void indexExistingSubtitles() throws IOException {
-        try (Stream<Path> paths = Files.walk(Path.of(subtitleDirectory), 2)) {
+        try (Stream<Path> paths = Files.walk(Path.of(cacheDirectory), 2)) {
             paths.filter(Files::isRegularFile)
                     .filter(p -> p.toString().endsWith(".srt") || p.toString().endsWith(".vtt"))
                     .forEach(this::indexSubtitleFile);
@@ -349,7 +345,7 @@ public class SubtitleService {
      * Adds a new subtitle file for translation.
      */
     public int addSubtitle(String fileName, String content) throws IOException {
-        Path filePath = Path.of(subtitleDirectory, fileName);
+        Path filePath = Path.of(cacheDirectory, fileName);
         Files.writeString(filePath, content, StandardCharsets.UTF_8);
 
         int fileId = nextFileId++;
