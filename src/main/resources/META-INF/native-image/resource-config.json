@@ -1,0 +1,25 @@
+{
+    "resources": {
+        "includes": [
+            {
+                "pattern": "\\Qapplication.yml\\E"
+            },
+            {
+                "pattern": "\\Qapplication.yaml\\E"
+            },
+            {
+                "pattern": "\\Qapplication.properties\\E"
+            },
+            {
+                "pattern": "static/.*"
+            },
+            {
+                "pattern": "templates/.*"
+            },
+            {
+                "pattern": "messages.*\\.properties"
+            }
+        ]
+    },
+    "bundles": []
+}

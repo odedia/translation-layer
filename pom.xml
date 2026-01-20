@@ -12,7 +12,7 @@
     
     <groupId>com.example</groupId>
     <artifactId>translation-layer</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0.0</version>
     <name>translation-layer</name>
     <description>OpenSubtitles-compatible translation service using TranslateGemma on Ollama</description>
     
@@ -99,6 +99,10 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.graalvm.buildtools</groupId>
+                <artifactId>native-maven-plugin</artifactId>
             </plugin>
         </plugins>
     </build>

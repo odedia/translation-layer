@@ -1,8 +1,14 @@
 # Translation Layer
 
+[![Native Image Build](https://github.com/odedia/translation-layer/actions/workflows/native-build.yml/badge.svg)](https://github.com/odedia/translation-layer/actions/workflows/native-build.yml)
+
 A subtitle translation service that **fetches English subtitles from OpenSubtitles.org and translates them to any popular language** using AI models running locally via **Ollama** or cloud-based via **OpenAI**.
 
-## 🆕 What's New (January 2026)
+## 🆕 What's New in v1.0.0 (January 2026)
+
+### 🚀 Native Compilation Support
+- **GraalVM Native Image** - compile to native executable for instant startup (~100ms) and reduced memory
+- **Pre-built binaries** - download native executables for Windows, macOS (Intel & ARM), and Linux from [Releases](https://github.com/odedia/translation-layer/releases)
 
 ### Manual Workflow (Works with Any Player!)
 Translate subtitles for **any video player** (Infuse, VLC, Plex, etc.) - not just Kodi/Stremio:
@@ -108,6 +114,7 @@ TranslateGemma is Google's specialized translation model based on Gemma 3. Avail
 
 ### 1. Build and Run the Application
 
+**Option A: Standard JVM (requires Java 25)**
 ```bash
 # Build
 ./mvnw clean package -DskipTests
@@ -115,6 +122,16 @@ TranslateGemma is Google's specialized translation model based on Gemma 3. Avail
 # Run
 ./mvnw spring-boot:run
 ```
+
+**Option B: Native Image (fastest startup)**
+```bash
+# Build native executable (requires GraalVM)
+./mvnw -Pnative native:compile
+
+# Run the native executable
+./target/translation-layer
+```
+> Native compilation takes ~5 minutes but results in ~100ms startup time and reduced memory usage.
 
 The service starts on `http://localhost:8080`.
 
